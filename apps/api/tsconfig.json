@@ -1,0 +1,10 @@
+{
+  "extends": "@kiraka/config/typescript/nestjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

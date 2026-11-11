@@ -39,3 +39,4 @@ export type ApiError = z.infer<typeof ApiErrorSchema>;
 export const CountryCodeSchema = z.string().length(2); // ISO 3166-1 alpha-2
 export const LocaleSchema = z.enum(['en', 'rw', 'fr']);
 export type Locale = z.infer<typeof LocaleSchema>;
+

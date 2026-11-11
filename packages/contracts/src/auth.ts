@@ -32,3 +32,4 @@ export const RegisterSchema = z.object({
   locale: z.enum(['en', 'rw', 'fr']).default('en'),
 });
 export type RegisterInput = z.infer<typeof RegisterSchema>;
+

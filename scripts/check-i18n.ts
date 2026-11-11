@@ -74,3 +74,4 @@ for (const locale of LOCALES) {
 
 console.log(`\n${failures === 0 ? '✓ All locales complete!' : `✗ ${failures} missing key(s) found.`}`);
 process.exit(failures > 0 ? 1 : 0);
+

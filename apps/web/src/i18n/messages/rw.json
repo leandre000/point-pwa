@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "home": "Ahabanza",
+    "jobs": "Imirimo",
+    "post": "Tanga akazi",
+    "messages": "Ubutumwa",
+    "me": "Konte yanjye"
+  },
+  "home": {
+    "tagline": "Bona ubufasha. Vumbura amahirwe.",
+    "subheading": "Isoko ryizewe rya serivisi zibanze i Kigali",
+    "findHelp": "Shaka ubufasha",
+    "findWork": "Shaka akazi",
+    "categories": "Ibyiciro by'akazi bikunzwe",
+    "cleaning": "Isuku n'isukura",
+    "plumbing": "Ubwubatsi bw'amazi",
+    "electrical": "Amashanyarazi",
+    "carpentry": "Ububaji n'ibikoresho",
+    "maintenance": "Gusana no kubungabunga",
+    "recentJobs": "Ibisabwa by'akazi hafi yawe",
+    "viewAll": "Reba byose",
+    "postPrompt": "Ukeneye ko hari igikorwa mu rugo cyangwa ku biro?",
+    "postCta": "Tanga akazi mu minota 2"
+  },
+  "jobs": {
+    "title": "Imirimo yawe",
+    "subtitle": "Kurikirana ibyo wasabye n'ibyo wasabye gukora",
+    "filterAll": "Byose",
+    "filterHiring": "Abo nshaka",
+    "filterWorking": "Ibyo nkora",
+    "emptyTitle": "Nta mirimo ihari",
+    "emptyDesc": "Nturatanga akazi cyangwa ngo utange igiciro ku mirimo.",
+    "postAction": "Tanga akazi"
+  },
+  "post": {
+    "title": "Saba serivisi y'akazi",
+    "step1": "Icyiciro",
+    "step2": "Ibisobanuro",
+    "step3": "Hano n'igihe",
+    "step4": "Isubiramo",
+    "categoryLabel": "Ukeneye ubufasha bwo mu buhe bwoko?",
+    "titleLabel": "Umutwe w'akazi",
+    "titlePlaceholder": "Urugero: Gusana umuyoboro w'amazi mu gikoni",
+    "descLabel": "Sobanura ibigomba gukorwa",
+    "descPlaceholder": "Tanga ibisobanuro nk'ibikoresho bikenewe, ubunini bw'icyumba...",
+    "areaLabel": "Agace k'i Kigali",
+    "areaPlaceholder": "Hitamo agace (urugero: Remera, Kacyiru...)",
+    "budgetLabel": "Ingengo y'imari y'agateganyo (ubishatse)",
+    "budgetPlaceholder": "Urugero: 10,000 RWF",
+    "publishAction": "Ohereza akazi",
+    "draftSaved": "Inyandiko y'agateganyo yabitswe"
+  },
+  "messages": {
+    "title": "Ubutumwa",
+    "subtitle": "Ibiganiro n'abo mwahujwe",
+    "emptyTitle": "Nta butumwa burahari",
+    "emptyDesc": "Iyo wemeye igiciro cyangwa igiciro cyawe cyemewe, ikiganiro kizagaragara hano.",
+    "offlineNotice": "Kuvugana bisaba interineti irimo gukora. Ubutumwa ntibushobora koherezwa udafite interineti."
+  },
+  "me": {
+    "title": "Konte yanjye",
+    "profile": "Umwirondoro n'agace utuyemo",
+    "providerTools": "Ibikoresho by'umukozi n'ubumenyi",
+    "notifications": "Ibyifuzo by'imenyesha",
+    "language": "Ururimi / Language / Langue",
+    "theme": "Isura y'urubuga",
+    "privacy": "Umutekano n'ibanga",
+    "help": "Ubufasha no kubaza",
+    "signOut": "Sohoka muri konte",
+    "version": "Verisiyo ya porogaramu"
+  },
+  "offline": {
+    "title": "Nta nterineti ufite",
+    "desc": "Reba niba ufite interineti kugira ngo utange ibiciro, wemere akazi, cyangwa wohereze ubutumwa.",
+    "retry": "Ongera ugerageze",
+    "cachedNotice": "Hagaragazwa amakuru yabitswe mbere."
+  },
+  "common": {
+    "loading": "Biri gutunganywa...",
+    "errorTitle": "Hari ikitagenze neza",
+    "errorDesc": "Ntitwashoboye kurangiza icyo wasabye. Ongera ugerageze.",
+    "retry": "Subiramo",
+    "back": "Inyuma",
+    "cancel": "Kureka",
+    "confirm": "Emeza",
+    "save": "Bika",
+    "currency": "RWF"
+  }
+}

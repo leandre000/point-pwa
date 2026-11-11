@@ -47,7 +47,7 @@ const light: ThemeColors = {
   'accent-tint': '#FBF1DC',
   info: '#2B6CB0',
   'info-tint': '#E8F0FA',
-  success: '#2F7D55',
+  success: '#286C49',
   'success-tint': '#E6F4EA',
   warning: '#8A5A00',
   'warning-tint': '#FBF1DC',
@@ -174,3 +174,4 @@ results.forEach((r) => console.log(r));
 console.log(`\n${failures === 0 ? '✓ All pairs pass!' : `✗ ${failures} pair(s) FAILED.`}`);
 
 process.exit(failures > 0 ? 1 : 0);
+

@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "jobs": "Missions",
+    "post": "Publier",
+    "messages": "Messages",
+    "me": "Mon profil"
+  },
+  "home": {
+    "tagline": "Trouvez de l'aide. Découvrez des opportunités.",
+    "subheading": "La plateforme locale de confiance à Kigali",
+    "findHelp": "Trouver de l'aide",
+    "findWork": "Trouver du travail",
+    "categories": "Catégories populaires",
+    "cleaning": "Nettoyage",
+    "plumbing": "Plomberie",
+    "electrical": "Électricité",
+    "carpentry": "Menuiserie",
+    "maintenance": "Entretien général",
+    "recentJobs": "Demandes récentes près de vous",
+    "viewAll": "Voir tout",
+    "postPrompt": "Besoin d'aide à la maison ou au bureau ?",
+    "postCta": "Publier une demande en 2 minutes"
+  },
+  "jobs": {
+    "title": "Vos missions",
+    "subtitle": "Suivez vos demandes et propositions",
+    "filterAll": "Toutes",
+    "filterHiring": "Mes demandes",
+    "filterWorking": "Mes offres",
+    "emptyTitle": "Aucune mission active",
+    "emptyDesc": "Vous n'avez pas encore publié de demande ni soumis d'offre.",
+    "postAction": "Publier une mission"
+  },
+  "post": {
+    "title": "Publier une demande de service",
+    "step1": "Catégorie",
+    "step2": "Détails",
+    "step3": "Lieu & Date",
+    "step4": "Vérification",
+    "categoryLabel": "De quel type d'aide avez-vous besoin ?",
+    "titleLabel": "Titre de la mission",
+    "titlePlaceholder": "ex: Réparer la fuite du lavabo de cuisine",
+    "descLabel": "Décrivez le travail à accomplir",
+    "descPlaceholder": "Fournissez les détails : matériel requis, taille de la pièce...",
+    "areaLabel": "Quartier à Kigali",
+    "areaPlaceholder": "Sélectionnez le quartier (ex. Remera, Kacyiru...)",
+    "budgetLabel": "Budget estimé (optionnel)",
+    "budgetPlaceholder": "ex: 10 000 RWF",
+    "publishAction": "Publier la demande",
+    "draftSaved": "Brouillon enregistré localement"
+  },
+  "messages": {
+    "title": "Messages",
+    "subtitle": "Conversations avec vos prestataires retenus",
+    "emptyTitle": "Aucun message pour l'instant",
+    "emptyDesc": "Dès qu'une offre est acceptée, votre conversation apparaîtra ici.",
+    "offlineNotice": "Le chat nécessite une connexion active. Les messages hors ligne ne sont pas envoyés silencieusement."
+  },
+  "me": {
+    "title": "Mon compte",
+    "profile": "Profil & Quartier",
+    "providerTools": "Outils de prestataire & Compétences",
+    "notifications": "Préférences de notification",
+    "language": "Langue / Ururimi / Language",
+    "theme": "Apparence",
+    "privacy": "Confidentialité & Sécurité",
+    "help": "Aide & Support",
+    "signOut": "Se déconnecter",
+    "version": "Version de l'application"
+  },
+  "offline": {
+    "title": "Vous êtes hors ligne",
+    "desc": "Vérifiez votre connexion Internet pour soumettre des offres, accepter des missions ou envoyer des messages.",
+    "retry": "Réessayer",
+    "cachedNotice": "Affichage des données sauvegardées."
+  },
+  "common": {
+    "loading": "Chargement...",
+    "errorTitle": "Une erreur s'est produite",
+    "errorDesc": "Impossible de traiter votre demande. Veuillez réessayer.",
+    "retry": "Réessayer",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "currency": "RWF"
+  }
+}

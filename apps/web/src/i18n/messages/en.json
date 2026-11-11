@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "home": "Home",
+    "jobs": "Jobs",
+    "post": "Post",
+    "messages": "Messages",
+    "me": "Me"
+  },
+  "home": {
+    "tagline": "Find help. Discover opportunity.",
+    "subheading": "Kigali's trusted local services marketplace",
+    "findHelp": "Find help",
+    "findWork": "Find work",
+    "categories": "Popular categories",
+    "cleaning": "Cleaning",
+    "plumbing": "Plumbing",
+    "electrical": "Electrical",
+    "carpentry": "Carpentry",
+    "maintenance": "General Maintenance",
+    "recentJobs": "Recent requests near you",
+    "viewAll": "View all",
+    "postPrompt": "Need something done at home or office?",
+    "postCta": "Post a Job in 2 minutes"
+  },
+  "jobs": {
+    "title": "Your Jobs",
+    "subtitle": "Track your requests and offers",
+    "filterAll": "All",
+    "filterHiring": "Hiring",
+    "filterWorking": "Working",
+    "emptyTitle": "No active jobs",
+    "emptyDesc": "You haven't posted any jobs or submitted any offers yet.",
+    "postAction": "Post a Job"
+  },
+  "post": {
+    "title": "Post a Service Request",
+    "step1": "Category",
+    "step2": "Details",
+    "step3": "Where & When",
+    "step4": "Review",
+    "categoryLabel": "What kind of help do you need?",
+    "titleLabel": "Job Title",
+    "titlePlaceholder": "e.g., Fix leaking kitchen sink pipe",
+    "descLabel": "Describe what needs to be done",
+    "descPlaceholder": "Provide details like materials needed, size of room, or issue symptoms...",
+    "areaLabel": "Neighborhood in Kigali",
+    "areaPlaceholder": "Select neighborhood (e.g. Remera, Kacyiru...)",
+    "budgetLabel": "Estimated Budget (optional)",
+    "budgetPlaceholder": "e.g., 10,000 RWF",
+    "publishAction": "Publish Job",
+    "draftSaved": "Draft saved locally"
+  },
+  "messages": {
+    "title": "Messages",
+    "subtitle": "Conversations with your matches",
+    "emptyTitle": "No messages yet",
+    "emptyDesc": "When you accept an offer or your offer is accepted, your conversation will appear here.",
+    "offlineNotice": "Chat requires an active internet connection. Offline messages cannot be sent silently."
+  },
+  "me": {
+    "title": "My Account",
+    "profile": "Profile & Neighborhood",
+    "providerTools": "Provider Tools & Skills",
+    "notifications": "Notification Preferences",
+    "language": "Language / Ururimi / Langue",
+    "theme": "Appearance",
+    "privacy": "Privacy & Safety",
+    "help": "Help & Support",
+    "signOut": "Sign Out",
+    "version": "App Version"
+  },
+  "offline": {
+    "title": "You are offline",
+    "desc": "Check your internet connection to submit offers, accept jobs, or send messages.",
+    "retry": "Try again",
+    "cachedNotice": "Displaying saved offline data."
+  },
+  "common": {
+    "loading": "Loading...",
+    "errorTitle": "Something went wrong",
+    "errorDesc": "We could not complete your request. Please try again.",
+    "retry": "Retry",
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "currency": "RWF"
+  }
+}

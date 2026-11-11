@@ -1,0 +1,253 @@
+// ─── KIRAKA Database Schema (Prisma) ───
+// PostgreSQL with strict constraints, minor units for money, country/locale from day one.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+  SUPPORT
+}
+
+enum VerificationLevel {
+  NONE
+  PHONE_VERIFIED
+  IDENTITY_CHECKED
+  BUSINESS_CHECKED
+  QUALIFICATION_VERIFIED
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  MATCHED
+  IN_PROGRESS
+  COMPLETION_REPORTED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  CLOSED
+  DISPUTED
+}
+
+enum OfferStatus {
+  SUBMITTED
+  COUNTERED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum MatchStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+// ─── Users & Sessions ───
+
+model User {
+  id              String            @id @default(uuid()) @db.Uuid
+  phone           String            @unique
+  phoneVerifiedAt DateTime?
+  role            UserRole          @default(USER)
+  countryCode     String            @default("RW") @db.VarChar(2)
+  locale          String            @default("en") @db.VarChar(5)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  customerProfile CustomerProfile?
+  providerProfile ProviderProfile?
+  sessions        UserSession[]
+  jobs            Job[]             @relation("CustomerJobs")
+  offers          Offer[]           @relation("ProviderOffers")
+  auditLogs       AuditLog[]
+
+  @@index([phone])
+  @@index([countryCode])
+}
+
+model UserSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Profiles ───
+
+model CustomerProfile {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @db.Uuid
+  displayName  String   @db.VarChar(100)
+  neighborhood String?  @db.VarChar(100)
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProviderProfile {
+  id                String            @id @default(uuid()) @db.Uuid
+  userId            String            @unique @db.Uuid
+  businessName      String            @db.VarChar(100)
+  bio               String?           @db.VarChar(1000)
+  verificationLevel VerificationLevel @default(NONE)
+  isVisible         Boolean           @default(true)
+  completedJobs     Int               @default(0)
+  ratingAverage     Int?              // Scale 100-500 (e.g., 480 = 4.8)
+  ratingCount       Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Marketplace Core ───
+
+model ServiceCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  nameEn      String
+  nameRw      String
+  nameFr      String
+  iconName    String
+  isActive    Boolean  @default(true)
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jobs Job[]
+}
+
+model ServiceArea {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  city        String   @default("Kigali")
+  countryCode String   @default("RW") @db.VarChar(2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jobs Job[]
+}
+
+model Job {
+  id               String      @id @default(uuid()) @db.Uuid
+  customerId       String      @db.Uuid
+  categoryId       String      @db.Uuid
+  areaId           String      @db.Uuid
+  title            String      @db.VarChar(200)
+  description      String      @db.VarChar(2000)
+  status           JobStatus   @default(OPEN)
+  
+  // Money stored strictly as integer minor units (RWF has 0 decimal digits, minor unit = franc)
+  budgetAmount     BigInt?
+  budgetCurrency   String      @default("RWF") @db.VarChar(3)
+  budgetNegotiable Boolean     @default(true)
+
+  timingPreference String?     @db.VarChar(200)
+  expiresAt        DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  customer User            @relation("CustomerJobs", fields: [customerId], references: [id], onDelete: Restrict)
+  category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  area     ServiceArea     @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  offers   Offer[]
+  match    Match?
+
+  @@index([customerId])
+  @@index([categoryId])
+  @@index([areaId])
+  @@index([status])
+}
+
+model Offer {
+  id           String      @id @default(uuid()) @db.Uuid
+  jobId        String      @db.Uuid
+  providerId   String      @db.Uuid
+  status       OfferStatus @default(SUBMITTED)
+  
+  // Minor units
+  priceAmount  BigInt
+  priceCurrency String     @default("RWF") @db.VarChar(3)
+
+  message      String?     @db.VarChar(1000)
+  availability String?     @db.VarChar(200)
+  version      Int         @default(1)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  provider User     @relation("ProviderOffers", fields: [providerId], references: [id], onDelete: Restrict)
+  matches  Match[]
+
+  @@unique([jobId, providerId])
+  @@index([jobId])
+  @@index([providerId])
+}
+
+model Match {
+  id            String      @id @default(uuid()) @db.Uuid
+  jobId         String      @unique @db.Uuid
+  offerId       String      @db.Uuid
+  status        MatchStatus @default(ACTIVE)
+
+  // Snapshotted agreed terms at accept time
+  agreedPriceAmount   BigInt
+  agreedPriceCurrency String   @default("RWF") @db.VarChar(3)
+  agreedTerms         String?
+
+  acceptedAt    DateTime    @default(now())
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  offer Offer @relation(fields: [offerId], references: [id], onDelete: Restrict)
+
+  @@index([jobId])
+  @@index([offerId])
+  @@index([status])
+}
+
+// ─── Auditing ───
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @db.VarChar(50)
+  entityId   String   @db.VarChar(100)
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}

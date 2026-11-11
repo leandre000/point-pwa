@@ -16,3 +16,4 @@ export const CounterOfferSchema = z.object({
   message: z.string().max(1000).optional(),
 });
 export type CounterOfferInput = z.infer<typeof CounterOfferSchema>;
+

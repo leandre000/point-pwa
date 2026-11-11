@@ -24,3 +24,4 @@ export type CreateJobInput = z.infer<typeof CreateJobSchema>;
 // ─── Update Job ───
 export const UpdateJobSchema = CreateJobSchema.partial();
 export type UpdateJobInput = z.infer<typeof UpdateJobSchema>;
+

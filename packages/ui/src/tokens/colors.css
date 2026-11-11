@@ -47,7 +47,7 @@
   --color-info-tint: #E8F0FA;
 
   /* ─── Semantic: Success ─── */
-  --color-success: #2F7D55;
+  --color-success: #286C49;
   --color-success-tint: #E6F4EA;
 
   /* ─── Semantic: Warning ─── */
@@ -101,3 +101,4 @@
   --color-danger: #F2877F;
   --color-danger-tint: #2E1614;
 }
+
