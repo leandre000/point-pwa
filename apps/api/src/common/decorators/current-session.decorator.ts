@@ -6,3 +6,4 @@ export const CurrentSessionToken = createParamDecorator(
     return request.sessionToken;
   },
 );
+

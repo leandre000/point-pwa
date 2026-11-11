@@ -66,3 +66,4 @@ export class ProfilesController {
     return this.profilesService.getPublicProvider(providerId);
   }
 }
+

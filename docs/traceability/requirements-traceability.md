@@ -13,7 +13,14 @@
 | **FR-PROF-02** | Provider profile (business name, bio, isVisible) | `/me` | `GET /me`, `PUT /me/provider-profile` | `ProviderProfile` | Provider update tests |
 | **FR-PROF-04** | Coarse location; no public phone or exact address | `/providers/:id`, `/jobs/:id` | `GET /providers/:id`<br>`GET /jobs/:id` | `CustomerProfile`, `ServiceArea` | `profiles.service.spec.ts` (BR-13) |
 | **BR-12** | Phone verified is never presented as ID check | `/me`, `/providers/:id` | `GET /me`, `GET /providers/:id` | `VerificationRecord` | UI Badge test |
-| **FR-CAT-01** | Dynamic service categories and areas | `/`, `/post` (step 1) | `GET /categories`<br>`GET /areas` | `ServiceCategory`, `ServiceArea` | Category CRUD tests |
+| **FR-CAT-01** | Dynamic service categories and areas | `/`, `/post`, `/providers` | `GET /categories`<br>`GET /areas` | `ServiceCategory`, `ServiceArea` | Categories & areas integration |
+| **FR-CAT-02** | Country, city, district hierarchy on areas | `/providers`, `/post` | `GET /areas` | `ServiceArea` | Data hierarchy test |
+| **FR-CAT-03** | Staged category rollout without redeployment | `/providers` | `GET /categories` | `ServiceCategory` | Seed / CRUD test |
+| **FR-DISC-01** | Browse and search providers by keyword | `/providers` | `GET /providers` | `ProviderProfile`, `User` | Discovery service search test |
+| **FR-DISC-02** | Filter providers by category and neighborhood | `/providers` | `GET /providers` | `ProviderProfile` | Filter query test |
+| **FR-DISC-03** | Relevance & quality default ranking (relevance, rating, jobs) | `/providers` | `GET /providers` | `ProviderProfile` | Ranking order test |
+| **FR-DISC-05** | Manual area selection fallback | `/providers`, `/post` | `GET /areas` | `ServiceArea` | Area chip selector test |
+| **FR-DISC-06** | Skeletons, empty, error, and cached offline states | `/providers` | Client UI | — | UI state tests |
 | **FR-JOB-01** | Create service request (job) | `/post` (4-step stepper) | `POST /jobs` | `Job` | CreateJob schema test |
 | **FR-JOB-03** | Public job shows coarse area only | `/jobs/:id` | `GET /jobs/:id` | `Job`, `ServiceArea` | Privacy audit test |
 | **FR-OFR-01** | Submit priced offer (minor units) | `/jobs/:id/offer` | `POST /jobs/:id/offers` | `Offer` | MoneySchema integer test |

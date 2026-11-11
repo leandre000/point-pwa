@@ -7,12 +7,12 @@
 
 ---
 
-## Current Milestone Status: M1 Auth & Profiles Complete
+## Current Milestone Status: M2 Categories & Discovery Complete
 
 ### Milestone Progress
 - [x] **M0: Foundation** (Monorepo, CI, Tokens, Design System, PWA Shell, API Skeleton, Docs) — **DONE**
 - [x] **M1: Auth, Profiles, Settings Core** (Phone OTP, Sessions, User Profiles, Settings) — **DONE**
-- [ ] **M2: Categories, Service Areas, Discovery** (Kigali Neighborhoods, Search, Filters)
+- [x] **M2: Categories, Service Areas, Discovery** (Kigali Neighborhoods, Search, Filters) — **DONE**
 - [ ] **M3: Jobs & Photo Uploads** (4-Step Composer, Drafts, Area Matching)
 - [ ] **M4: Offers, Counteroffers, Accept & Matches** (Immutable History, Single Active Match)
 - [ ] **M5: In-App Messaging & Notifications** (WebSockets, In-App Center, Web Push)

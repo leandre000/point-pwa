@@ -93,3 +93,4 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   );
 };
 OtpInput.displayName = 'OtpInput';
+

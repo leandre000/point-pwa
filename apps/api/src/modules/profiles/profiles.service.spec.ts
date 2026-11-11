@@ -38,3 +38,4 @@ describe('ProfilesService (Trust & Privacy Rules)', () => {
     expect((publicProfile as any).userId).toBeUndefined();
   });
 });
+

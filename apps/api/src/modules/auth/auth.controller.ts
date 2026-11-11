@@ -128,3 +128,4 @@ export class AuthController {
     return this.authService.revokeOtherSessions(user.id, currentToken);
   }
 }
+
