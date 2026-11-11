@@ -1,0 +1,8 @@
+/* ─── KIRAKA Design Tokens: Shape ─── */
+
+:root {
+  --radius-control: 0.5rem;   /* 8px — buttons, inputs */
+  --radius-card: 0.75rem;     /* 12px — cards */
+  --radius-sheet: 1rem;       /* 16px — bottom sheets */
+  --radius-pill: 62.438rem;   /* 999px — pills, chips */
+}

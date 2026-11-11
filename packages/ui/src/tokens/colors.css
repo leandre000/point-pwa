@@ -1,0 +1,103 @@
+/* ─── KIRAKA Design Tokens: Colors ───
+ * Source of truth for the color system.
+ * Based on the Build Master Prompt §4.2.
+ * 60-30-10 rule: 60% warm neutrals, 30% green tints, 10% accents.
+ */
+
+:root {
+  /* ─── Backgrounds ─── */
+  --color-bg: #FAF9F6;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F3F1EA;
+
+  /* ─── Borders ─── */
+  --color-border: #E4E0D5;
+  --color-border-strong: #CFC9BA;
+
+  /* ─── Text ─── */
+  --color-text: #1E2421;
+  --color-text-secondary: #4F5953;
+  --color-text-tertiary: #69736C;
+
+  /* ─── Primary (brand green) ─── */
+  --color-primary: #205641;
+  --color-primary-hover: #194735;
+  --color-primary-tint: #EEF5F0;
+  --color-on-primary: #FFFFFF;
+
+  /* ─── Brand green scale ─── */
+  --color-green-50: #EEF5F0;
+  --color-green-100: #DCEBE1;
+  --color-green-200: #B9D6C4;
+  --color-green-300: #8DBBA0;
+  --color-green-400: #5E9B7B;
+  --color-green-500: #357A5B;
+  --color-green-600: #205641;
+  --color-green-700: #194735;
+  --color-green-800: #123B2C;
+  --color-green-900: #0C2B20;
+
+  /* ─── Accent (amber) ─── */
+  --color-accent: #C98A1B;
+  --color-accent-text: #8A5A00;
+  --color-accent-tint: #FBF1DC;
+
+  /* ─── Semantic: Info ─── */
+  --color-info: #2B6CB0;
+  --color-info-tint: #E8F0FA;
+
+  /* ─── Semantic: Success ─── */
+  --color-success: #2F7D55;
+  --color-success-tint: #E6F4EA;
+
+  /* ─── Semantic: Warning ─── */
+  --color-warning: #8A5A00;
+  --color-warning-tint: #FBF1DC;
+
+  /* ─── Semantic: Danger ─── */
+  --color-danger: #B3261E;
+  --color-danger-tint: #FCECEA;
+}
+
+[data-theme="dark"] {
+  /* ─── Backgrounds ─── */
+  --color-bg: #0E1411;
+  --color-surface: #151D18;
+  --color-surface-2: #1C2621;
+
+  /* ─── Borders ─── */
+  --color-border: #2A3730;
+  --color-border-strong: #3B4A42;
+
+  /* ─── Text ─── */
+  --color-text: #EAF0EC;
+  --color-text-secondary: #B4C0B8;
+  --color-text-tertiary: #8E9C94;
+
+  /* ─── Primary (brand green) ─── */
+  --color-primary: #6CC49A;
+  --color-primary-hover: #85D2AE;
+  --color-primary-tint: #17271F;
+  --color-on-primary: #0C2B20;
+
+  /* ─── Accent (amber) ─── */
+  --color-accent: #E0A83A;
+  --color-accent-text: #E8B957;
+  --color-accent-tint: #2B2312;
+
+  /* ─── Semantic: Info ─── */
+  --color-info: #7FB0E8;
+  --color-info-tint: #14202E;
+
+  /* ─── Semantic: Success ─── */
+  --color-success: #6CC49A;
+  --color-success-tint: #14261C;
+
+  /* ─── Semantic: Warning ─── */
+  --color-warning: #E8B957;
+  --color-warning-tint: #2B2312;
+
+  /* ─── Semantic: Danger ─── */
+  --color-danger: #F2877F;
+  --color-danger-tint: #2E1614;
+}

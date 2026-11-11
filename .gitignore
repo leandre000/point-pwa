@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+.next/
+.turbo/
+out/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+
+# Prisma
+apps/api/prisma/*.db
+
+# Logs
+*.log
+logs/
+
+# Generated
+*.generated.*
+packages/contracts/dist/
+packages/ui/dist/
+packages/config/dist/

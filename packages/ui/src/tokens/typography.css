@@ -1,0 +1,51 @@
+/* ─── KIRAKA Design Tokens: Typography ───
+ * Inter variable, self-hosted, Latin + Latin Extended subset.
+ * font-display: swap, preloaded in root layout.
+ */
+
+:root {
+  --font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* ─── Display: 32/38, 700 — Onboarding, hero moments ─── */
+  --text-display-size: 2rem;
+  --text-display-line: 2.375rem;
+  --text-display-weight: 700;
+
+  /* ─── H1: 28/34, 700 — Screen titles ─── */
+  --text-h1-size: 1.75rem;
+  --text-h1-line: 2.125rem;
+  --text-h1-weight: 700;
+
+  /* ─── H2: 22/28, 600 — Section titles ─── */
+  --text-h2-size: 1.375rem;
+  --text-h2-line: 1.75rem;
+  --text-h2-weight: 600;
+
+  /* ─── H3: 18/24, 600 — Card titles ─── */
+  --text-h3-size: 1.125rem;
+  --text-h3-line: 1.5rem;
+  --text-h3-weight: 600;
+
+  /* ─── Body: 16/24, 400 — Default (also inputs, prevents iOS zoom) ─── */
+  --text-body-size: 1rem;
+  --text-body-line: 1.5rem;
+  --text-body-weight: 400;
+
+  /* ─── Body strong: 16/24, 600 ─── */
+  --text-body-strong-weight: 600;
+
+  /* ─── Small: 14/20, 400 — Supporting text ─── */
+  --text-small-size: 0.875rem;
+  --text-small-line: 1.25rem;
+  --text-small-weight: 400;
+
+  /* ─── Caption: 12/16, 500 — Metadata only; never for essential info ─── */
+  --text-caption-size: 0.75rem;
+  --text-caption-line: 1rem;
+  --text-caption-weight: 500;
+
+  /* ─── Price: 20/24, 700 — Tabular numerals, most prominent on cards ─── */
+  --text-price-size: 1.25rem;
+  --text-price-line: 1.5rem;
+  --text-price-weight: 700;
+}

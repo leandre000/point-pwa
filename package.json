@@ -1,0 +1,34 @@
+{
+  "name": "kiraka",
+  "private": true,
+  "version": "0.1.0",
+  "description": "KIRAKA — Find help. Discover opportunity. A Rwanda-first local services marketplace.",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:e2e": "turbo test:e2e",
+    "check:contrast": "turbo check:contrast",
+    "check:i18n": "turbo check:i18n",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.0",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.4.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,css}": ["prettier --write"]
+  },
+  "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
