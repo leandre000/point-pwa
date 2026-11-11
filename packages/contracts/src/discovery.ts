@@ -79,3 +79,4 @@ export const ProviderListItemSchema = z.object({
   isAvailable: z.boolean(),
 });
 export type ProviderListItem = z.infer<typeof ProviderListItemSchema>;
+

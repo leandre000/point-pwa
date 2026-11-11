@@ -8,3 +8,4 @@ import { CategoriesService } from './categories.service.js';
   exports: [CategoriesService],
 })
 export class CategoriesModule {}
+

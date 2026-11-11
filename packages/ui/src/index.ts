@@ -22,3 +22,5 @@ export * from './components/OtpInput.js';
 export * from './components/PhoneInput.js';
 export * from './components/ProviderCard.js';
 export * from './components/SearchField.js';
+export * from './components/JobCard.js';
+export * from './components/ImageUploader.js';

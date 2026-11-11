@@ -21,8 +21,13 @@
 | **FR-DISC-03** | Relevance & quality default ranking (relevance, rating, jobs) | `/providers` | `GET /providers` | `ProviderProfile` | Ranking order test |
 | **FR-DISC-05** | Manual area selection fallback | `/providers`, `/post` | `GET /areas` | `ServiceArea` | Area chip selector test |
 | **FR-DISC-06** | Skeletons, empty, error, and cached offline states | `/providers` | Client UI | — | UI state tests |
-| **FR-JOB-01** | Create service request (job) | `/post` (4-step stepper) | `POST /jobs` | `Job` | CreateJob schema test |
-| **FR-JOB-03** | Public job shows coarse area only | `/jobs/:id` | `GET /jobs/:id` | `Job`, `ServiceArea` | Privacy audit test |
+| **FR-JOB-01** | Create service request (job) | `/post` (4-step stepper) | `POST /jobs` | `Job`, `JobAttachment` | `jobs.service.spec.ts` |
+| **FR-JOB-02** | Local draft autosave | `/post` | LocalStorage client | — | Local draft restore test |
+| **FR-JOB-03** | Public job shows coarse area only | `/jobs`, `/jobs/:id` | `GET /jobs`, `GET /jobs/:id` | `Job`, `ServiceArea` | `jobs.service.spec.ts` (BR-13) |
+| **FR-JOB-05** | Cancel open job by customer | `/jobs/:id` | `POST /jobs/:id/cancel` | `Job`, `AuditLog` | `jobs.service.spec.ts` |
+| **FR-JOB-06** | 72-hour default job expiry | Scheduled cleanup | `POST /jobs` | `Job.expiresAt` | `jobs.service.spec.ts` |
+| **FR-JOB-07** | Anti-spam job rate limiting (5/day) | `/post` | `POST /jobs` | `Job` | `jobs.service.spec.ts` |
+| **D-009** | Photo attachments with pre-compression | `/post` (step 2) | `POST /jobs` | `JobAttachment` | `ImageUploader` canvas test |
 | **FR-OFR-01** | Submit priced offer (minor units) | `/jobs/:id/offer` | `POST /jobs/:id/offers` | `Offer` | MoneySchema integer test |
 | **FR-OFR-02** | Counteroffers with immutable history | `/jobs/:id/offers/:id` | `POST /offers/:id/counter` | `Offer` (versioned) | Immutable version test |
 | **FR-OFR-05** | Deliberate acceptance with confirmation | `/jobs/:id/offers/:id/accept` | `POST /offers/:id/accept` | `Match`, `Offer`, `Job` | Confirmation sheet test |

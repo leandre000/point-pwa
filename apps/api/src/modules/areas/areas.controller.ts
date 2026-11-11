@@ -17,3 +17,4 @@ export class AreasController {
     return this.areasService.createArea(body);
   }
 }
+

@@ -17,3 +17,4 @@ export class DiscoveryController {
     return this.discoveryService.searchProviders(query);
   }
 }
+

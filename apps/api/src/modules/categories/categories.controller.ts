@@ -22,3 +22,4 @@ export class CategoriesController {
     return this.categoriesService.createCategory(body);
   }
 }
+
