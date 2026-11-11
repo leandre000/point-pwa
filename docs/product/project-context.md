@@ -7,11 +7,11 @@
 
 ---
 
-## Current Milestone Status: M0 Foundation Complete
+## Current Milestone Status: M1 Auth & Profiles Complete
 
 ### Milestone Progress
 - [x] **M0: Foundation** (Monorepo, CI, Tokens, Design System, PWA Shell, API Skeleton, Docs) — **DONE**
-- [ ] **M1: Auth, Profiles, Settings Core** (Phone OTP, Sessions, User Profiles, Settings)
+- [x] **M1: Auth, Profiles, Settings Core** (Phone OTP, Sessions, User Profiles, Settings) — **DONE**
 - [ ] **M2: Categories, Service Areas, Discovery** (Kigali Neighborhoods, Search, Filters)
 - [ ] **M3: Jobs & Photo Uploads** (4-Step Composer, Drafts, Area Matching)
 - [ ] **M4: Offers, Counteroffers, Accept & Matches** (Immutable History, Single Active Match)
@@ -29,3 +29,4 @@
 3. **No text below 12px:** Tabular numerals for all prices and timestamps.
 4. **Price is the headline:** Price appears bold and prominent on all job and offer cards.
 5. **No accidental commitments:** Explicit confirmation sheets for accepting offers.
+

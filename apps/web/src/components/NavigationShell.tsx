@@ -92,3 +92,4 @@ export function NavigationShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

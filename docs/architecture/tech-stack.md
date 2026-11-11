@@ -31,3 +31,4 @@
 2. **i18n Completeness:** `scripts/check-i18n.ts` guarantees zero missing keys across `en`, `rw`, and `fr`.
 3. **Typecheck & Lint:** `tsc --noEmit` and ESLint flat config with strict rules.
 4. **Unit & E2E Testing:** Vitest for domain logic and components, Playwright for user journeys.
+

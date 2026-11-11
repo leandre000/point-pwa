@@ -58,3 +58,4 @@ export const Avatar: React.FC<AvatarProps> = ({
   );
 };
 Avatar.displayName = 'Avatar';
+

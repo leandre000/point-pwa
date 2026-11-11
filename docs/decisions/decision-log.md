@@ -13,3 +13,4 @@
 | **D-009** | 2026-11-11 | Image upload for jobs in MVP (compressed on client); Provider portfolio in S-tier | Visual proof of repair issues increases offer accuracy | Text-only job requests; full portfolio galleries | S3-compatible signed URLs; sharp image pipeline; client-side pre-compression | **Proposed** |
 | **D-010** | 2026-11-11 | Design system tokens strictly enforce WCAG AA (4.5:1 min) via CI gate | Kigali outdoor sunlight readability; accessibility baseline | Generic Tailwind defaults | Automated contrast check script fails CI if any pair drops below threshold | **Confirmed** |
 | **D-011** | 2026-11-11 | Trilingual UI (English, Kinyarwanda, French) from day one | Broad adoption across diverse Kigali demographics | English-only pilot | i18n key completeness checker enforced in CI gate | **Confirmed** |
+

@@ -33,3 +33,4 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className, variant, ...props
   );
 };
 Skeleton.displayName = 'Skeleton';
+

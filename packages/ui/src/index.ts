@@ -18,3 +18,5 @@ export * from './components/BottomNav.js';
 export * from './components/TopAppBar.js';
 export * from './components/EmptyState.js';
 export * from './components/ErrorState.js';
+export * from './components/OtpInput.js';
+export * from './components/PhoneInput.js';

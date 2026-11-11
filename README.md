@@ -83,3 +83,4 @@ pnpm lint
 6. Coarse location by default; exact address shared only after a match by explicit customer action.
 7. Money stored strictly in integer minor units with ISO currency code (`RWF`).
 8. Critical actions (offer, accept, message, confirm completion) are never silently queued offline.
+

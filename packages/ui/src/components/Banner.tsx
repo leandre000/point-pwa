@@ -70,3 +70,4 @@ export const Banner: React.FC<BannerProps> = ({
   );
 };
 Banner.displayName = 'Banner';
+

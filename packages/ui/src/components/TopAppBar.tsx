@@ -51,3 +51,4 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
   );
 };
 TopAppBar.displayName = 'TopAppBar';
+

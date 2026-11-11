@@ -7,3 +7,4 @@ export const config = {
   // Match all paths except internal next.js files, api, and public static assets
   matcher: ['/((?!api|_next|_vercel|icons|fonts|.*\\..*).*)'],
 };
+
