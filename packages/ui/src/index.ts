@@ -24,3 +24,5 @@ export * from './components/ProviderCard.js';
 export * from './components/SearchField.js';
 export * from './components/JobCard.js';
 export * from './components/ImageUploader.js';
+export * from './components/OfferCard.js';
+export * from './components/AcceptConfirmationSheet.js';

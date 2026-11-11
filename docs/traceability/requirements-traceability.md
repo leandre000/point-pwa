@@ -28,11 +28,17 @@
 | **FR-JOB-06** | 72-hour default job expiry | Scheduled cleanup | `POST /jobs` | `Job.expiresAt` | `jobs.service.spec.ts` |
 | **FR-JOB-07** | Anti-spam job rate limiting (5/day) | `/post` | `POST /jobs` | `Job` | `jobs.service.spec.ts` |
 | **D-009** | Photo attachments with pre-compression | `/post` (step 2) | `POST /jobs` | `JobAttachment` | `ImageUploader` canvas test |
-| **FR-OFR-01** | Submit priced offer (minor units) | `/jobs/:id/offer` | `POST /jobs/:id/offers` | `Offer` | MoneySchema integer test |
-| **FR-OFR-02** | Counteroffers with immutable history | `/jobs/:id/offers/:id` | `POST /offers/:id/counter` | `Offer` (versioned) | Immutable version test |
-| **FR-OFR-05** | Deliberate acceptance with confirmation | `/jobs/:id/offers/:id/accept` | `POST /offers/:id/accept` | `Match`, `Offer`, `Job` | Confirmation sheet test |
-| **FR-OFR-08** | Concurrent accept creates exactly one Match | Match confirmation sheet | `POST /offers/:id/accept` | `Match` (unique jobId) | AC-OFR-08 concurrency test |
-| **FR-MATCH-01** | Exactly one active Match per job | Job progress view | `GET /matches/:id` | `Match` | DB partial unique index test |
+| **FR-OFR-01** | Submit priced offer (minor units) | `/jobs/:id/offer` | `POST /jobs/:id/offers` | `Offer`, `OfferVersion` | `offers.service.spec.ts` |
+| **FR-OFR-02** | Counteroffers with immutable history | `/jobs/:id/offers` | `POST /offers/:id/counter` | `OfferVersion` | `offers.service.spec.ts` |
+| **FR-OFR-03** | Max 5 negotiation rounds | `/jobs/:id/offers` | `POST /offers/:id/counter` | `Offer.version` | Round limit test |
+| **FR-OFR-04** | Neutral, quality-first sort order | `/jobs/:id/offers` | `GET /jobs/:id/offers` | `Offer` | Sorting comparator test |
+| **FR-OFR-05** | Deliberate accept confirmation sheet | `/jobs/:id/offers` | `AcceptConfirmationSheet` | `Match` | Sheet UI state test |
+| **FR-OFR-06** | Snapshot agreed price and terms on accept | `/jobs/:id/offers` | `POST /offers/:id/accept` | `Match` | `offers.service.spec.ts` (BR-04) |
+| **FR-OFR-07** | Provider offer withdrawal | `/jobs/:id/offers` | `POST /offers/:id/withdraw` | `Offer` | Withdrawal test |
+| **FR-OFR-08** | Atomic accept prevents concurrent double-matching | `/jobs/:id/offers` | `POST /offers/:id/accept` | `Match` | `offers.service.spec.ts` (BR-01, BR-05) |
+| **FR-MATCH-01** | Exactly one active Match per job | `/jobs/:id` | DB partial unique index | `Match` | DB constraint verification |
+| **FR-MATCH-02** | Competing offers closed on Match | `/jobs/:id/offers` | `POST /offers/:id/accept` | `Offer` | Competing offers rejection test |
+| **BR-14** | Offline accept & offer disabled with explanation | Offer & Accept UI | `AcceptConfirmationSheet` | — | Offline button guard test |
 | **FR-MSG-01** | In-app messaging for matched parties | `/messages/:id` | `GET /conversations/:id`<br>`WS /chat` | `Match` | Auth & membership guard |
 | **FR-COMP-01** | Provider reports done; Customer confirms | Job timeline card | `POST /matches/:id/completion`<br>`POST /matches/:id/confirm-completion` | `Match` | AC-COMP-01 state guard |
 | **FR-REV-01** | Reviews only after confirmed completion | Review sheet | `POST /matches/:id/reviews` | `Match` | BR-09 rule guard test |

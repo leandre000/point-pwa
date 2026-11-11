@@ -7,6 +7,7 @@ import { CategoriesModule } from './modules/categories/categories.module.js';
 import { AreasModule } from './modules/areas/areas.module.js';
 import { DiscoveryModule } from './modules/discovery/discovery.module.js';
 import { JobsModule } from './modules/jobs/jobs.module.js';
+import { OffersModule } from './modules/offers/offers.module.js';
 import { PrismaService } from './database/prisma.service.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { PrismaService } from './database/prisma.service.js';
     AreasModule,
     DiscoveryModule,
     JobsModule,
+    OffersModule,
   ],
   providers: [PrismaService],
   exports: [PrismaService],

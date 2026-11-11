@@ -7,14 +7,14 @@
 
 ---
 
-## Current Milestone Status: M3 Jobs & Composer Complete
+## Current Milestone Status: M4 Offers & Matches Complete
 
 ### Milestone Progress
 - [x] **M0: Foundation** (Monorepo, CI, Tokens, Design System, PWA Shell, API Skeleton, Docs) — **DONE**
 - [x] **M1: Auth, Profiles, Settings Core** (Phone OTP, Sessions, User Profiles, Settings) — **DONE**
 - [x] **M2: Categories, Service Areas, Discovery** (Kigali Neighborhoods, Search, Filters) — **DONE**
 - [x] **M3: Jobs & Photo Uploads** (4-Step Composer, Drafts, Area Matching) — **DONE**
-- [ ] **M4: Offers, Counteroffers, Accept & Matches** (Immutable History, Single Active Match)
+- [x] **M4: Offers, Counteroffers, Accept & Matches** (Immutable History, Single Active Match) — **DONE**
 - [ ] **M5: In-App Messaging & Notifications** (WebSockets, In-App Center, Web Push)
 - [ ] **M6: Completion, Disputes & Transaction Reviews** (Customer Confirmation, Resolution)
 - [ ] **M7: Reporting, Safety & Admin Console** (Moderation, Auditing, Suspension)
