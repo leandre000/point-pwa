@@ -45,6 +45,10 @@ packages/contracts/dist/
 packages/ui/dist/
 packages/config/dist/
 
+# Local scripts and documentation (local only, do not track)
+scripts/
+docs/
+
 # Assets & References
 docs/reference/
 *.zip

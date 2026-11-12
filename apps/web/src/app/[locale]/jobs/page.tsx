@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from '@/i18n/routing';
 import { JobCard, EmptyState, Button, Skeleton, ErrorState } from '@kiraka/ui';
-import { Briefcase, Plus, Search, Filter, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Briefcase, Plus, Search, Filter, CheckCircle2, ArrowRight, X } from 'lucide-react';
 import { apiClient } from '@/lib/api-client.js';
 import { useAuth } from '@/lib/auth-context.js';
 
@@ -211,16 +211,35 @@ export default function JobsPage() {
           </Button>
         </div>
 
-        {/* Search bar */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-[#8E9892] pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter by title, category, or neighborhood..."
-            className="w-full h-11 pl-10 pr-3 rounded-xl bg-white border border-[#E8E7E3] text-sm text-[#1A201C] placeholder:text-[#8E9892] focus:outline-none focus:ring-2 focus:ring-[#1F513F]"
-          />
+        {/* Search bar & Filter trigger */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-[#8E9892] pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search title, category, neighborhood..."
+              className="w-full h-11 pl-10 pr-3 rounded-xl bg-white border border-[#E8E7E3] text-sm text-[#1A201C] placeholder:text-[#8E9892] focus:outline-none focus:ring-2 focus:ring-[#1F513F]"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setFilterSheetOpen(true)}
+            className={`h-11 px-3.5 rounded-xl border flex items-center gap-1.5 text-xs font-semibold transition-colors shrink-0 ${
+              activeFilterCount > 0
+                ? 'bg-[#E8F1EC] text-[#1F513F] border-[#1F513F]'
+                : 'bg-white text-[#5E6862] border-[#E8E7E3] hover:text-[#1A201C]'
+            }`}
+          >
+            <Filter className="h-4 w-4" />
+            <span className="hidden sm:inline">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-[#1F513F] text-white text-[10px] flex items-center justify-center font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Filter Tabs (PointMe local bidding feed layout) */}
@@ -382,6 +401,131 @@ export default function JobsPage() {
           </div>
         )}
       </div>
+
+      {/* Feed Filters Sheet (PointMe Feed filters sheet.png) */}
+      {filterSheetOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+        >
+          <div className="w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white border border-[#E8E7E3] p-5 sm:p-6 space-y-4 shadow-float animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto">
+            {/* Sheet Header */}
+            <div className="flex items-center justify-between pb-1 border-b border-[#E8E7E3]/60">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[#1A201C]">
+                  Filters
+                </h3>
+                {activeFilterCount > 0 && (
+                  <span className="text-xs text-[#5E6862]">
+                    ({activeFilterCount} active)
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="text-xs font-semibold text-[#1F513F] hover:underline"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setFilterSheetOpen(false)}
+                  className="p-1 rounded-full text-[#5E6862] hover:bg-[#F2F1ED] transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Category selection */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[#1A201C] uppercase tracking-wider">
+                Service Category
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                      selectedCategory === cat.id
+                        ? 'bg-[#1F513F] text-white border-[#1F513F] shadow-sm'
+                        : 'bg-white text-[#5E6862] border-[#E8E7E3] hover:text-[#1A201C]'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Neighborhood / Area selection */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[#1A201C] uppercase tracking-wider">
+                Kigali Neighborhood
+              </label>
+              <select
+                value={selectedArea}
+                onChange={(e) => setSelectedArea(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-[#E8E7E3] bg-white text-xs font-semibold text-[#1A201C] focus:outline-none focus:ring-2 focus:ring-[#1F513F] cursor-pointer"
+              >
+                {KIGALI_NEIGHBORHOODS.map((area) => (
+                  <option key={area} value={area === 'All Areas' ? 'all' : area}>
+                    {area}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Budget Range selection */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[#1A201C] uppercase tracking-wider">
+                Budget Range (RWF)
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { id: 'all', label: 'Any budget' },
+                  { id: 'under10k', label: 'Under 10,000' },
+                  { id: '10k-25k', label: '10,000 – 25,000' },
+                  { id: '25k-plus', label: '25,000+' },
+                ].map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setSelectedBudgetRange(b.id as any)}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-semibold transition-all border text-center ${
+                      selectedBudgetRange === b.id
+                        ? 'bg-[#E8F1EC] text-[#1F513F] border-[#1F513F]'
+                        : 'bg-white text-[#5E6862] border-[#E8E7E3] hover:bg-[#F8F8F6]'
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Apply Button */}
+            <div className="pt-2">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => setFilterSheetOpen(false)}
+                className="w-full rounded-full bg-[#1F513F] hover:bg-[#163C2E] text-white font-bold text-sm h-12 shadow-sm"
+              >
+                Show {filteredJobs.length} broadcast{filteredJobs.length === 1 ? '' : 's'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
