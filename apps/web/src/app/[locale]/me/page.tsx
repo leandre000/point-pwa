@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from '@/i18n/routing';
+import { useRouter, usePathname } from '@/i18n/routing';
+import { useLocale } from 'next-intl';
 import {
   TopAppBar,
   Card,
@@ -32,6 +33,8 @@ import {
   X,
   Shield,
   FileText,
+  Globe,
+  Check,
 } from 'lucide-react';
 
 const KIGALI_NEIGHBORHOODS = [
@@ -51,10 +54,12 @@ const KIGALI_NEIGHBORHOODS = [
 
 export default function MePage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = useLocale();
   const { user, isAuthenticated, logout, refreshUser } = useAuth();
 
-  // Active view: 'main' | 'personal' | 'provider' | 'security' | 'help'
-  const [view, setView] = React.useState<'main' | 'personal' | 'provider' | 'security' | 'help'>('main');
+  // Active view: 'main' | 'personal' | 'provider' | 'security' | 'help' | 'language'
+  const [view, setView] = React.useState<'main' | 'personal' | 'provider' | 'security' | 'help' | 'language'>('main');
 
   // Personal details state
   const [fullName, setFullName] = React.useState(user?.fullName || '');
@@ -183,6 +188,8 @@ export default function MePage() {
             ? 'Sign-in & Security'
             : view === 'help'
             ? 'Help & Support'
+            : view === 'language'
+            ? 'Language / Ururimi / Langue'
             : 'My Account'
         }
         onBack={view !== 'main' ? () => setView('main') : undefined}
@@ -297,6 +304,25 @@ export default function MePage() {
                     </div>
                     <div className="text-[12px] text-[var(--color-text-secondary)]">
                       FAQs, emergency contacts, support
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setView('language')}
+                className="w-full flex items-center justify-between p-3.5 hover:bg-[var(--color-surface-2)] transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <Globe className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                  <div>
+                    <div className="text-[14px] font-semibold text-[var(--color-text)]">
+                      Language / Ururimi / Langue
+                    </div>
+                    <div className="text-[12px] text-[var(--color-text-secondary)]">
+                      {locale === 'rw' ? 'Ikinyarwanda (RW)' : locale === 'fr' ? 'Français (FR)' : 'English (EN)'}
                     </div>
                   </div>
                 </div>
@@ -487,6 +513,64 @@ export default function MePage() {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            VIEW: LANGUAGE SELECTOR (Section 9)
+           ═══════════════════════════════════════════════════════════════ */}
+        {view === 'language' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl space-y-2">
+              <h3 className="text-sm font-bold text-[var(--color-text)]">
+                Select Platform Language
+              </h3>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Choose your preferred language for interfaces, alerts, and instructions across KIRAKA.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] divide-y divide-[var(--color-border)] overflow-hidden shadow-sm">
+              {[
+                { code: 'en', name: 'English', native: 'English', desc: 'Default marketplace experience' },
+                { code: 'rw', name: 'Kinyarwanda', native: 'Ikinyarwanda', desc: 'Isoko ryizewe rya Kigali mu Kinyarwanda' },
+                { code: 'fr', name: 'French', native: 'Français', desc: 'Expérience complète en français' },
+              ].map((lang) => {
+                const isSelected = locale === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    type="button"
+                    onClick={() => {
+                      router.replace(pathname, { locale: lang.code });
+                      setView('main');
+                    }}
+                    className={`w-full flex items-center justify-between p-4 transition-colors text-left ${
+                      isSelected
+                        ? 'bg-[var(--color-primary-tint)]/20 text-[var(--color-primary)]'
+                        : 'hover:bg-[var(--color-surface-2)] text-[var(--color-text)]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[15px] font-bold">
+                          {lang.native}
+                        </span>
+                        <span className="text-xs text-[var(--color-text-tertiary)]">
+                          ({lang.name})
+                        </span>
+                      </div>
+                      <div className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">
+                        {lang.desc}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <Check className="h-5 w-5 text-[var(--color-primary)] shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
