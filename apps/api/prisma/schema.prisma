@@ -108,22 +108,84 @@ model User {
 }
 
 model UserSession {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @db.Uuid
-  token        String    @unique
-  refreshToken String?   @unique
-  deviceLabel  String?
-  userAgent    String?
-  ipAddress    String?
-  lastUsedAt   DateTime  @default(now())
-  revokedAt    DateTime?
-  expiresAt    DateTime
-  createdAt    DateTime  @default(now())
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @db.Uuid
+  token              String    @unique
+  refreshToken       String?   @unique
+  rotatedToken       String?   // Previous refresh token allowed during grace period
+  rotatedAt          DateTime? // Timestamp when token was rotated (10s grace window)
+  deviceLabel        String?
+  userAgent          String?
+  ipAddress          String?
+  lastUsedAt         DateTime  @default(now())
+  revokedAt          DateTime?
+  expiresAt          DateTime
+  createdAt          DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
+  @@index([refreshToken])
+}
+
+// ─── Admin Identity & Sessions (D-024) ───
+
+enum AdminRole {
+  SUPER_ADMIN
+  SUPPORT
+  MODERATOR
+}
+
+model AdminAccount {
+  id                String             @id @default(uuid()) @db.Uuid
+  email             String             @unique
+  fullName          String             @db.VarChar(100)
+  passwordHash      String
+  role              AdminRole          @default(SUPER_ADMIN)
+  twoFactorEnabled  Boolean            @default(false)
+  twoFactorSecret   String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  sessions          AdminSession[]
+  handoffCodes      AdminHandoffCode[]
+
+  @@index([email])
+}
+
+model AdminSession {
+  id           String       @id @default(uuid()) @db.Uuid
+  adminId      String       @db.Uuid
+  token        String       @unique
+  userAgent    String?
+  ipAddress    String?
+  lastUsedAt   DateTime     @default(now())
+  revokedAt    DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime     @default(now())
+
+  admin        AdminAccount @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([token])
+}
+
+model AdminHandoffCode {
+  id            String       @id @default(uuid()) @db.Uuid
+  adminId       String       @db.Uuid
+  codeHash      String       @unique
+  ipHash        String
+  userAgentHash String
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime     @default(now())
+
+  admin         AdminAccount @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([codeHash])
+  @@index([adminId])
 }
 
 model VerificationCode {

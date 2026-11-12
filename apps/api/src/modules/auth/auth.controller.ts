@@ -33,6 +33,7 @@ import {
 @Controller('auth')
 export class AuthController {
   private readonly COOKIE_NAME = 'kiraka_session';
+  private readonly REFRESH_COOKIE_NAME = 'kiraka_refresh';
 
   constructor(private readonly authService: AuthService) {}
 
@@ -73,24 +74,26 @@ export class AuthController {
     const userAgent = req.headers['user-agent'];
     const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
 
-    const { user, token, isNewUser } = await this.authService.createPassword(
+    const { user, token, refreshToken, isNewUser } = await this.authService.createPassword(
       body,
       userAgent,
       ipAddress,
     );
 
-    this.setSessionCookie(res, token);
+    this.setSessionCookies(res, token!, refreshToken);
 
     return {
       success: true,
       user,
       token,
+      refreshToken,
       isNewUser,
     };
   }
 
   /**
    * Section 1.3: Sign In — Email and Password ONLY (NO OTP AT LOGIN)
+   * If admin credentials entered: issues single-use 30s handoff code, redirects to ADMIN_ORIGIN (D-024)
    */
   @Post(['login', 'sign-in'])
   @HttpCode(HttpStatus.OK)
@@ -102,14 +105,52 @@ export class AuthController {
     const userAgent = req.headers['user-agent'];
     const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
 
-    const { user, token } = await this.authService.login(body, userAgent, ipAddress);
+    const result = await this.authService.login(body, userAgent, ipAddress);
 
-    this.setSessionCookie(res, token);
+    // If admin credentials: handoff immediately, create NO customer session (D-024)
+    if (result.requiresAdminHandoff) {
+      return {
+        success: true,
+        requiresAdminHandoff: true,
+        handoffCode: result.handoffCode,
+        adminOrigin: result.adminOrigin,
+        redirectUrl: result.redirectUrl,
+      };
+    }
+
+    this.setSessionCookies(res, result.token!, result.refreshToken);
 
     return {
       success: true,
-      user,
-      token,
+      user: result.user,
+      token: result.token,
+      refreshToken: result.refreshToken,
+    };
+  }
+
+  /**
+   * P0-A: Silent Token Refresh (Single flight on 401)
+   */
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body('refreshToken') bodyRefreshToken?: string,
+  ) {
+    const refreshToken = req.cookies?.[this.REFRESH_COOKIE_NAME] || bodyRefreshToken;
+    const userAgent = req.headers['user-agent'];
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+
+    const result = await this.authService.refreshSession(refreshToken, userAgent, ipAddress);
+
+    this.setSessionCookies(res, result.token, result.refreshToken);
+
+    return {
+      success: true,
+      user: result.user,
+      token: result.token,
+      refreshToken: result.refreshToken,
     };
   }
 
@@ -139,14 +180,19 @@ export class AuthController {
     const userAgent = req.headers['user-agent'];
     const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
 
-    const { user, token } = await this.authService.resetPassword(body, userAgent, ipAddress);
+    const { user, token, refreshToken } = await this.authService.resetPassword(
+      body,
+      userAgent,
+      ipAddress,
+    );
 
-    this.setSessionCookie(res, token);
+    this.setSessionCookies(res, token!, refreshToken);
 
     return {
       success: true,
       user,
       token,
+      refreshToken,
       message: 'Your password has been reset successfully.',
     };
   }
@@ -161,7 +207,7 @@ export class AuthController {
   }
 
   /**
-   * Logout: Revokes server session and clears cookie
+   * Logout: Revokes server session and clears cookies
    */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
@@ -179,11 +225,18 @@ export class AuthController {
       sameSite: 'lax',
       path: '/',
     });
+    res.clearCookie(this.REFRESH_COOKIE_NAME, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+    });
     return { success: true, message: 'Logged out successfully' };
   }
 
-  private setSessionCookie(res: Response, token: string) {
+  private setSessionCookies(res: Response, token: string, refreshToken?: string) {
     const isProduction = process.env.NODE_ENV === 'production';
+    // 1. Session / Access Cookie
     res.cookie(this.COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProduction,
@@ -191,5 +244,16 @@ export class AuthController {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       path: '/',
     });
+
+    // 2. Rotating Refresh Cookie (D-023)
+    if (refreshToken) {
+      res.cookie(this.REFRESH_COOKIE_NAME, refreshToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: '/',
+      });
+    }
   }
 }

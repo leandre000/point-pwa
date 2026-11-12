@@ -19,7 +19,7 @@ export default function AdminLoginPage() {
     setError(null);
 
     try {
-      const res: any = await apiClient('/api/v1/auth/login', {
+      const res: any = await apiClient('/api/v1/admin/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           email: email.toLowerCase().trim(),
@@ -27,8 +27,8 @@ export default function AdminLoginPage() {
         }),
       });
 
-      if (res.user?.role !== 'ADMIN') {
-        setError('This account does not have Super Admin privileges (Section 6.1).');
+      if (!res.admin) {
+        setError('Super Admin authentication failed.');
         return;
       }
 

@@ -105,7 +105,7 @@ async function main() {
   }
   console.log(`✓ Seeded ${areas.length} Kigali launch neighborhoods.`);
 
-  // 3. Single Super Admin (D-012, D-020)
+  // 3. Single Super Admin (D-012, D-020, D-024)
   const adminEmail = (process.env.ADMIN_SEED_EMAIL || 'Iamshemaleandre@gmail.com').toLowerCase().trim();
   const seedPassword = process.env.ADMIN_SEED_PASSWORD || 'KirakaAdmin2026!';
   const passwordHash = await hash(seedPassword, {
@@ -114,37 +114,29 @@ async function main() {
     timeCost: 2,
   });
 
-  const superAdmin = await prisma.user.upsert({
+  // Purge any legacy customer User record with this email to enforce total separation (D-024)
+  await prisma.user.deleteMany({
+    where: { email: adminEmail },
+  });
+
+  const superAdmin = await prisma.adminAccount.upsert({
     where: { email: adminEmail },
     update: {
       fullName: 'Shema Andre (Super Admin)',
-      role: UserRole.ADMIN,
-      status: UserStatus.ACTIVE,
+      role: 'SUPER_ADMIN',
       isActive: true,
-      emailVerifiedAt: new Date(),
       passwordHash,
     },
     create: {
       email: adminEmail,
       fullName: 'Shema Andre (Super Admin)',
-      passwordHash,
-      role: UserRole.ADMIN,
-      status: UserStatus.ACTIVE,
-      countryCode: 'RW',
-      locale: 'en',
+      role: 'SUPER_ADMIN',
       isActive: true,
-      emailVerifiedAt: new Date(),
-      customerProfile: {
-        create: {
-          displayName: 'Shema Andre (Super Admin)',
-          neighborhood: 'Kacyiru',
-        },
-      },
+      passwordHash,
     },
-    include: { customerProfile: true },
   });
 
-  console.log(`✓ Seeded single Super Admin: ${superAdmin.email} [Role: ${superAdmin.role}, Status: ${superAdmin.status}]`);
+  console.log(`✓ Seeded dedicated Super Admin: ${superAdmin.email} [Role: ${superAdmin.role}]`);
   console.log('Zero mock data seeded. Marketplace starts in clean reference state.');
 }
 

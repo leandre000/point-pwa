@@ -69,6 +69,7 @@ export default function AuthPage() {
 
   // Form states (Email only authentication per D-017, D-018)
   const [email, setEmail] = React.useState('');
+  const [lastEmail, setLastEmail] = React.useState<string | null>(null);
   const [fullName, setFullName] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -77,6 +78,17 @@ export default function AuthPage() {
   const [otpCode, setOtpCode] = React.useState('');
   const [maskedEmail, setMaskedEmail] = React.useState('');
   const [setupToken, setSetupToken] = React.useState('');
+
+  // P0-A: Hydrate last email from localStorage on mount (Section 2)
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('kiraka_last_email');
+      if (saved) {
+        setLastEmail(saved);
+        setEmail(saved);
+      }
+    } catch {}
+  }, []);
 
   // Onboarding states
   const [neighborhood, setNeighborhood] = React.useState('Remera, Gasabo');
@@ -133,7 +145,12 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      await login(email.trim(), password);
+      const res: any = await login(email.trim(), password);
+      // D-024: Admin handoff redirect
+      if (res?.requiresAdminHandoff && res?.redirectUrl) {
+        window.location.href = res.redirectUrl;
+        return;
+      }
       const returnUrl = sessionStorage.getItem('kiraka_auth_return_url');
       if (returnUrl) {
         sessionStorage.removeItem('kiraka_auth_return_url');
@@ -357,6 +374,26 @@ export default function AuthPage() {
              ═══════════════════════════════════════════════════════════════ */}
           {mode === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-4">
+              {/* P0-A: Welcome back state when returning with remembered email (Section 2) */}
+              {lastEmail && email === lastEmail && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-xs text-[var(--color-primary)]">
+                  <div>
+                    <span className="font-semibold block">Welcome back!</span>
+                    <span className="text-[11px] opacity-80">Continuing as {lastEmail}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLastEmail(null);
+                      setEmail('');
+                    }}
+                    className="text-[11px] font-semibold underline hover:opacity-100"
+                  >
+                    Switch account
+                  </button>
+                </div>
+              )}
+
               <Input
                 label="Email address"
                 type="email"

@@ -128,9 +128,15 @@ export class OtpService {
     if (this.emailService) {
       await this.sendEmailWithTimeout(normalizedEmail, code, purpose);
     }
-    this.logger.log(
-      `[KIRAKA-AUTH] Dispatched ${purpose} code to ${this.maskEmail(normalizedEmail)}`,
-    );
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log(
+        `[KIRAKA-AUTH] [DEV] ${purpose} code for ${normalizedEmail}: ${code}`,
+      );
+    } else {
+      this.logger.log(
+        `[KIRAKA-AUTH] Dispatched ${purpose} code to ${this.maskEmail(normalizedEmail)}`,
+      );
+    }
 
     return {
       cooldownSeconds: 60,

@@ -13,28 +13,37 @@ export class AdminGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token =
-      request.cookies?.['kiraka_session'] ||
+    const adminToken =
+      request.cookies?.['kiraka_admin_session'] ||
       this.extractBearerToken(request.headers.authorization);
 
-    if (!token) {
-      throw new UnauthorizedException('Authentication required');
+    if (adminToken) {
+      const { admin, session } = await this.authService.validateAdminSession(adminToken);
+      request.user = admin;
+      request.admin = admin;
+      request.session = session;
+      request.sessionToken = adminToken;
+      return true;
     }
 
-    const sessionData = await this.authService.validateSession(token);
-    if (!sessionData || !sessionData.user) {
-      throw new UnauthorizedException('Invalid or expired session');
+    // Fallback: check legacy customer session token if it has ADMIN or MODERATOR role
+    const customerToken = request.cookies?.['kiraka_session'];
+    if (customerToken) {
+      try {
+        const sessionData = await this.authService.validateSession(customerToken);
+        if (
+          sessionData?.user &&
+          (sessionData.user.role === 'ADMIN' || sessionData.user.role === 'MODERATOR')
+        ) {
+          request.user = sessionData.user;
+          request.session = sessionData.session;
+          request.sessionToken = customerToken;
+          return true;
+        }
+      } catch {}
     }
 
-    const { user, session } = sessionData;
-    if (user.role !== 'ADMIN' && user.role !== 'MODERATOR') {
-      throw new ForbiddenException('Admin or moderator privilege required');
-    }
-
-    request.user = user;
-    request.session = session;
-    request.sessionToken = token;
-    return true;
+    throw new UnauthorizedException('Super Admin session required.');
   }
 
   private extractBearerToken(header?: string): string | null {
@@ -42,4 +51,5 @@ export class AdminGuard implements CanActivate {
     return header.slice(7);
   }
 }
+
 

@@ -23,9 +23,14 @@ import {
 } from '@kiraka/contracts';
 
 export interface AuthSessionResult {
-  user: any;
-  token: string;
+  user?: any;
+  token?: string;
+  refreshToken?: string;
   isNewUser?: boolean;
+  requiresAdminHandoff?: boolean;
+  handoffCode?: string;
+  adminOrigin?: string;
+  redirectUrl?: string;
 }
 
 interface LoginAttemptTracker {
@@ -41,6 +46,9 @@ export class AuthService {
   // In-memory fallback stores (active when DB connection is deferred or in local dev)
   private readonly inMemoryUsers = new Map<string, any>();
   private readonly inMemorySessions = new Map<string, any>();
+  private readonly inMemoryAdmins = new Map<string, any>();
+  private readonly inMemoryAdminSessions = new Map<string, any>();
+  private readonly inMemoryHandoffCodes = new Map<string, any>();
   private readonly loginAttempts = new Map<string, LoginAttemptTracker>();
 
   constructor(
@@ -57,29 +65,43 @@ export class AuthService {
     const seedPass = process.env.ADMIN_SEED_PASSWORD || 'KirakaAdmin2026!';
     const hash = await this.passwordService.hashPassword(seedPass);
 
-    const superAdmin = {
+    const admin = {
       id: '00000000-0000-0000-0000-000000000001',
       email: adminEmail,
       fullName: 'Shema Andre (Super Admin)',
-      emailVerifiedAt: new Date(),
       passwordHash: hash,
-      role: 'ADMIN',
-      status: UserStatus.ACTIVE,
-      countryCode: 'RW',
-      locale: 'en',
+      role: 'SUPER_ADMIN',
+      twoFactorEnabled: false,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
-      customerProfile: {
-        id: '00000000-0000-0000-0000-000000000002',
-        displayName: 'Shema Andre (Super Admin)',
-        neighborhood: 'Kacyiru',
-        avatarUrl: null,
-      },
-      providerProfile: null,
     };
-    this.inMemoryUsers.set(adminEmail, superAdmin);
-    this.inMemoryUsers.set(superAdmin.id, superAdmin);
+    this.inMemoryAdmins.set(adminEmail, admin);
+    this.inMemoryAdmins.set(admin.id, admin);
+
+    try {
+      await this.prisma.adminAccount.upsert({
+        where: { email: adminEmail },
+        update: {
+          fullName: admin.fullName,
+          passwordHash: hash,
+          role: 'SUPER_ADMIN',
+          isActive: true,
+        },
+        create: {
+          id: admin.id,
+          email: adminEmail,
+          fullName: admin.fullName,
+          passwordHash: hash,
+          role: 'SUPER_ADMIN',
+          isActive: true,
+        },
+      });
+      // Purge any customer User record for admin email to enforce complete separation (D-024)
+      await this.prisma.user.deleteMany({
+        where: { email: adminEmail },
+      });
+    } catch {}
   }
 
   /**
@@ -290,6 +312,7 @@ export class AuthService {
     return {
       user: this.formatUserDto(user),
       token: session.token,
+      refreshToken: session.refreshToken,
       isNewUser: true,
     };
   }
@@ -297,6 +320,7 @@ export class AuthService {
   /**
    * Section 1.3: Sign In — Email and Password ONLY.
    * NO OTP AT LOGIN. Rate limit + Turnstile after failures + anti-enumeration timing.
+   * D-024: If admin credentials are entered, issues 30s handoff code and redirects to ADMIN_ORIGIN.
    */
   async login(
     input: SignInRequest,
@@ -322,8 +346,55 @@ export class AuthService {
 
     const user = await this.findUserByEmail(email);
 
+    // If not found in customer User table, check if this is an Admin account (D-024)
+    if (!user) {
+      const admin = await this.findAdminByEmail(email);
+      if (admin && admin.isActive) {
+        const isPasswordMatch = await this.passwordService.verifyPassword(
+          admin.passwordHash,
+          input.password,
+        );
+        if (isPasswordMatch) {
+          this.loginAttempts.delete(trackerKey);
+          const handoff = await this.createAdminHandoff(admin.id, ipAddress, userAgent);
+          return {
+            requiresAdminHandoff: true,
+            handoffCode: handoff.handoffCode,
+            adminOrigin: handoff.adminOrigin,
+            redirectUrl: handoff.redirectUrl,
+          };
+        }
+      }
+
+      await this.passwordService.dummyVerify();
+      this.recordLoginFailure(trackerKey, attempt);
+      throw new UnauthorizedException('Email or password is incorrect.');
+    }
+
+    // If customer record is an admin role (legacy or migration state), redirect to admin portal (D-024)
+    if (user.role === 'ADMIN') {
+      const isValid = await this.passwordService.verifyPassword(user.passwordHash, input.password);
+      if (isValid) {
+        this.loginAttempts.delete(trackerKey);
+        let admin = await this.findAdminByEmail(email);
+        if (!admin) {
+          await this.seedSuperAdmin();
+          admin = await this.findAdminByEmail(email);
+        }
+        if (admin) {
+          const handoff = await this.createAdminHandoff(admin.id, ipAddress, userAgent);
+          return {
+            requiresAdminHandoff: true,
+            handoffCode: handoff.handoffCode,
+            adminOrigin: handoff.adminOrigin,
+            redirectUrl: handoff.redirectUrl,
+          };
+        }
+      }
+    }
+
     // Anti-enumeration timing defense: if user doesn't exist or is not active, verify dummy hash
-    if (!user || user.status !== UserStatus.ACTIVE || !user.passwordHash) {
+    if (user.status !== UserStatus.ACTIVE || !user.passwordHash) {
       await this.passwordService.dummyVerify();
       this.recordLoginFailure(trackerKey, attempt);
       throw new UnauthorizedException('Email or password is incorrect.');
@@ -352,6 +423,7 @@ export class AuthService {
     return {
       user: this.formatUserDto(user),
       token: session.token,
+      refreshToken: session.refreshToken,
       isNewUser: false,
     };
   }
@@ -433,7 +505,370 @@ export class AuthService {
     return {
       user: this.formatUserDto(user),
       token: session.token,
+      refreshToken: session.refreshToken,
     };
+  }
+
+  /**
+   * P0-A: Rotating Refresh Token with 10-Second Grace Window
+   */
+  async refreshSession(
+    refreshToken: string,
+    userAgent?: string,
+    ipAddress?: string,
+  ): Promise<{ user: any; token: string; refreshToken: string }> {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required.');
+    }
+
+    let session: any = null;
+
+    // 1. Search in memory
+    for (const [, s] of this.inMemorySessions.entries()) {
+      if (s.refreshToken === refreshToken) {
+        session = s;
+        break;
+      }
+      // Check 10-second grace window for rotated token (concurrency support)
+      if (
+        s.rotatedToken === refreshToken &&
+        s.rotatedAt &&
+        Date.now() - new Date(s.rotatedAt).getTime() < 10000
+      ) {
+        const user = s.user || this.inMemoryUsers.get(s.userId);
+        return {
+          user: this.formatUserDto(user),
+          token: s.token,
+          refreshToken: s.refreshToken,
+        };
+      }
+    }
+
+    // 2. Search in Prisma DB
+    if (!session) {
+      try {
+        const dbSession = await this.prisma.userSession.findUnique({
+          where: { refreshToken },
+          include: {
+            user: {
+              include: { customerProfile: true, providerProfile: true },
+            },
+          },
+        });
+
+        if (dbSession) {
+          session = dbSession;
+        } else {
+          // Check grace window in DB
+          const rotatedSession = await this.prisma.userSession.findFirst({
+            where: {
+              rotatedToken: refreshToken,
+              rotatedAt: { gte: new Date(Date.now() - 10000) },
+            },
+            include: {
+              user: {
+                include: { customerProfile: true, providerProfile: true },
+              },
+            },
+          });
+          if (rotatedSession && !rotatedSession.revokedAt) {
+            return {
+              user: this.formatUserDto(rotatedSession.user),
+              token: rotatedSession.token,
+              refreshToken: rotatedSession.refreshToken || '',
+            };
+          }
+        }
+      } catch {}
+    }
+
+    if (!session || session.revokedAt || new Date() > new Date(session.expiresAt)) {
+      throw new UnauthorizedException('Refresh token expired or revoked. Please sign in again.');
+    }
+
+    const user = session.user || this.inMemoryUsers.get(session.userId);
+    if (!user || user.status !== UserStatus.ACTIVE || !user.isActive) {
+      throw new UnauthorizedException('User account is inactive.');
+    }
+
+    // Rotate tokens
+    const newToken = crypto.randomBytes(32).toString('hex');
+    const newRefreshToken = crypto.randomBytes(48).toString('hex');
+    const rotatedAt = new Date();
+    const expiresAt = new Date(Date.now() + this.SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+
+    // Update in-memory session
+    this.inMemorySessions.delete(session.token);
+    session.rotatedToken = session.refreshToken;
+    session.rotatedAt = rotatedAt;
+    session.token = newToken;
+    session.refreshToken = newRefreshToken;
+    session.lastUsedAt = new Date();
+    session.expiresAt = expiresAt;
+    this.inMemorySessions.set(newToken, session);
+
+    // Update DB
+    try {
+      await this.prisma.userSession.update({
+        where: { id: session.id },
+        data: {
+          token: newToken,
+          refreshToken: newRefreshToken,
+          rotatedToken: session.rotatedToken,
+          rotatedAt,
+          lastUsedAt: session.lastUsedAt,
+          expiresAt,
+        },
+      });
+    } catch {}
+
+    return {
+      user: this.formatUserDto(user),
+      token: newToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  // ─── P0-B: Admin Authentication & Routing (D-020, D-024) ───
+
+  async loginAdmin(
+    email: string,
+    password: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<{ admin: any; token: string }> {
+    const normalizedEmail = email.toLowerCase().trim();
+    const admin = await this.findAdminByEmail(normalizedEmail);
+
+    if (!admin || !admin.isActive) {
+      await this.passwordService.dummyVerify();
+      throw new UnauthorizedException('Email or password is incorrect.');
+    }
+
+    const isValid = await this.passwordService.verifyPassword(admin.passwordHash, password);
+    if (!isValid) {
+      throw new UnauthorizedException('Email or password is incorrect.');
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours absolute
+    const session = {
+      id: crypto.randomUUID(),
+      adminId: admin.id,
+      admin,
+      token,
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+      lastUsedAt: new Date(),
+      revokedAt: null,
+      expiresAt,
+      createdAt: new Date(),
+    };
+
+    this.inMemoryAdminSessions.set(token, session);
+
+    try {
+      await this.prisma.adminSession.create({
+        data: {
+          id: session.id,
+          adminId: admin.id,
+          token,
+          ipAddress: session.ipAddress,
+          userAgent: session.userAgent,
+          lastUsedAt: session.lastUsedAt,
+          expiresAt,
+        },
+      });
+    } catch {}
+
+    return { admin, token };
+  }
+
+  async createAdminHandoff(adminId: string, ipAddress?: string, userAgent?: string) {
+    const code = crypto.randomBytes(32).toString('hex');
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    const ipHash = crypto.createHash('sha256').update(ipAddress || 'unknown').digest('hex');
+    const userAgentHash = crypto.createHash('sha256').update(userAgent || 'unknown').digest('hex');
+    const expiresAt = new Date(Date.now() + 30 * 1000); // 30-second single-use limit
+
+    const handoff = {
+      id: crypto.randomUUID(),
+      adminId,
+      codeHash,
+      ipHash,
+      userAgentHash,
+      expiresAt,
+      consumedAt: null,
+      createdAt: new Date(),
+    };
+
+    this.inMemoryHandoffCodes.set(codeHash, handoff);
+
+    try {
+      await this.prisma.adminHandoffCode.create({
+        data: {
+          id: handoff.id,
+          adminId,
+          codeHash,
+          ipHash,
+          userAgentHash,
+          expiresAt,
+        },
+      });
+    } catch {}
+
+    const adminOrigin = process.env.ADMIN_ORIGIN || 'http://localhost:3002';
+    return {
+      handoffCode: code,
+      adminOrigin,
+      redirectUrl: `${adminOrigin}/handoff?code=${code}`,
+    };
+  }
+
+  async exchangeAdminHandoff(
+    code: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<{ admin: any; token: string }> {
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    let handoff = this.inMemoryHandoffCodes.get(codeHash);
+
+    if (!handoff) {
+      try {
+        handoff = await this.prisma.adminHandoffCode.findUnique({
+          where: { codeHash },
+          include: { admin: true },
+        });
+      } catch {}
+    }
+
+    if (!handoff || handoff.consumedAt || new Date() > new Date(handoff.expiresAt)) {
+      throw new UnauthorizedException(
+        'Admin handoff link is invalid or has expired (30-second single-use limit). Please sign in directly on the Admin Console.',
+      );
+    }
+
+    handoff.consumedAt = new Date();
+    try {
+      await this.prisma.adminHandoffCode.update({
+        where: { codeHash },
+        data: { consumedAt: new Date() },
+      });
+    } catch {}
+
+    const admin = handoff.admin || this.inMemoryAdmins.get(handoff.adminId);
+    if (!admin || !admin.isActive) {
+      throw new ForbiddenException('Admin account is inactive or not found.');
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+    const session = {
+      id: crypto.randomUUID(),
+      adminId: admin.id,
+      admin,
+      token,
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+      lastUsedAt: new Date(),
+      revokedAt: null,
+      expiresAt,
+      createdAt: new Date(),
+    };
+
+    this.inMemoryAdminSessions.set(token, session);
+
+    try {
+      await this.prisma.adminSession.create({
+        data: {
+          id: session.id,
+          adminId: admin.id,
+          token,
+          ipAddress: session.ipAddress,
+          userAgent: session.userAgent,
+          lastUsedAt: session.lastUsedAt,
+          expiresAt,
+        },
+      });
+    } catch {}
+
+    return { admin, token };
+  }
+
+  async validateAdminSession(token: string): Promise<{ admin: any; session: any }> {
+    let session = this.inMemoryAdminSessions.get(token);
+
+    if (!session) {
+      try {
+        const dbSession = await this.prisma.adminSession.findUnique({
+          where: { token },
+          include: { admin: true },
+        });
+        if (dbSession && !dbSession.revokedAt && dbSession.expiresAt > new Date()) {
+          session = dbSession;
+        }
+      } catch {}
+    }
+
+    if (!session || session.revokedAt || new Date() > new Date(session.expiresAt)) {
+      throw new UnauthorizedException('Admin session expired or invalidated.');
+    }
+
+    // 2-hour idle timeout check
+    const twoHoursMs = 2 * 60 * 60 * 1000;
+    if (Date.now() - new Date(session.lastUsedAt).getTime() > twoHoursMs) {
+      session.revokedAt = new Date();
+      try {
+        await this.prisma.adminSession.update({
+          where: { token },
+          data: { revokedAt: new Date() },
+        });
+      } catch {}
+      throw new UnauthorizedException('Admin session timed out due to 2 hours of inactivity.');
+    }
+
+    // Touch lastUsedAt
+    session.lastUsedAt = new Date();
+    try {
+      await this.prisma.adminSession.update({
+        where: { token },
+        data: { lastUsedAt: session.lastUsedAt },
+      });
+    } catch {}
+
+    const admin = session.admin || this.inMemoryAdmins.get(session.adminId);
+    if (!admin || !admin.isActive) {
+      throw new UnauthorizedException('Admin account is inactive.');
+    }
+
+    return { admin, session };
+  }
+
+  async logoutAdmin(token: string): Promise<void> {
+    const session = this.inMemoryAdminSessions.get(token);
+    if (session) {
+      session.revokedAt = new Date();
+    }
+    try {
+      await this.prisma.adminSession.update({
+        where: { token },
+        data: { revokedAt: new Date() },
+      });
+    } catch {}
+  }
+
+  async findAdminByEmail(email: string) {
+    const normalized = email.toLowerCase().trim();
+    const mem = this.inMemoryAdmins.get(normalized);
+    if (mem) return mem;
+
+    try {
+      return await this.prisma.adminAccount.findUnique({
+        where: { email: normalized },
+      });
+    } catch {
+      return null;
+    }
   }
 
   /**

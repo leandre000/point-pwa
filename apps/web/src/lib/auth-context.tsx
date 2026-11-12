@@ -27,15 +27,48 @@ interface AuthContextType {
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<MeResponse | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // P0-A: Non-sensitive cached user snapshot for zero-flash hydration (Section 2)
+  const [user, setUser] = React.useState<MeResponse | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('kiraka_user_snapshot');
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      } catch {}
+    }
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('kiraka_user_snapshot');
+        if (cached) return false;
+      } catch {}
+    }
+    return true;
+  });
 
   const refreshUser = React.useCallback(async () => {
     try {
       const data = await apiClient<MeResponse>('/api/v1/auth/me');
       setUser(data);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('kiraka_user_snapshot', JSON.stringify(data));
+          if (data.email) {
+            localStorage.setItem('kiraka_last_email', data.email);
+          }
+        } catch {}
+      }
     } catch {
       setUser(null);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('kiraka_user_snapshot');
+        } catch {}
+      }
     } finally {
       setIsLoading(false);
     }
@@ -102,15 +135,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     setUser(res.user);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('kiraka_user_snapshot', JSON.stringify(res.user));
+        if (res.user.email) {
+          localStorage.setItem('kiraka_last_email', res.user.email);
+        }
+      } catch {}
+    }
     return { user: res.user, isNewUser: res.isNewUser };
   };
 
   // Section 1.3: Sign In with Email & Password ONLY (NO OTP)
+  // D-024: If admin credentials entered, redirects to ADMIN_ORIGIN without customer session
   const login = async (email: string, password: string, turnstileToken?: string) => {
     const res = await apiClient<{
       success: boolean;
-      user: MeResponse;
-      token: string;
+      user?: MeResponse;
+      token?: string;
+      requiresAdminHandoff?: boolean;
+      handoffCode?: string;
+      adminOrigin?: string;
+      redirectUrl?: string;
     }>('/api/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({
@@ -120,8 +166,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }),
     });
 
-    setUser(res.user);
-    return { user: res.user };
+    if (res.requiresAdminHandoff && res.redirectUrl) {
+      window.location.href = res.redirectUrl;
+      return { user: null as any };
+    }
+
+    if (res.user) {
+      setUser(res.user);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('kiraka_user_snapshot', JSON.stringify(res.user));
+          if (res.user.email) {
+            localStorage.setItem('kiraka_last_email', res.user.email);
+          }
+        } catch {}
+      }
+    }
+    return { user: res.user! };
   };
 
   // Section 1.4: Forgot Password Request (OTP to Email)
@@ -161,6 +222,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     setUser(res.user);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('kiraka_user_snapshot', JSON.stringify(res.user));
+        if (res.user.email) {
+          localStorage.setItem('kiraka_last_email', res.user.email);
+        }
+      } catch {}
+    }
     return { user: res.user, message: res.message };
   };
 
@@ -179,6 +248,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiClient('/api/v1/auth/logout', { method: 'POST' });
     } catch {}
     setUser(null);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('kiraka_user_snapshot');
+      } catch {}
+    }
   };
 
   return (
