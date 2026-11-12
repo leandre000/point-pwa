@@ -2,76 +2,187 @@ import {
   Controller,
   Post,
   Get,
-  Delete,
   Body,
   Req,
   Res,
   UseGuards,
-  Param,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
-import { OtpService } from './otp.service.js';
 import { AuthGuard } from '../../common/guards/auth.guard.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { CurrentSessionToken } from '../../common/decorators/current-session.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import {
-  OtpRequestSchema,
-  OtpVerifySchema,
-  type OtpRequest,
-  type OtpVerify,
-  type OtpRequestResponse,
+  RegisterRequestSchema,
+  VerifySignupOtpSchema,
+  CreatePasswordSchema,
+  SignInRequestSchema,
+  ForgotPasswordRequestSchema,
+  ResetPasswordSchema,
+  type RegisterRequest,
+  type VerifySignupOtpInput,
+  type CreatePasswordInput,
+  type SignInRequest,
+  type ForgotPasswordRequest,
+  type ResetPasswordInput,
 } from '@kiraka/contracts';
-import type { User } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
   private readonly COOKIE_NAME = 'kiraka_session';
 
-  constructor(
-    private readonly authService: AuthService,
-    private readonly otpService: OtpService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
-  @Post('otp/request')
+  /**
+   * Section 1.2: Sign Up (Screen 1) — Request Email OTP
+   */
+  @Post('register')
   @HttpCode(HttpStatus.OK)
-  async requestOtp(
-    @Body(new ZodValidationPipe(OtpRequestSchema)) body: OtpRequest,
+  async register(
+    @Body(new ZodValidationPipe(RegisterRequestSchema)) body: RegisterRequest,
     @Req() req: Request,
-  ): Promise<OtpRequestResponse> {
+  ) {
     const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
-    const result = await this.otpService.requestOtp(body.phone, ipAddress);
-
-    return {
-      success: true,
-      message: 'Verification code sent via SMS',
-      cooldownSeconds: result.cooldownSeconds,
-      expiresInSeconds: result.expiresInSeconds,
-      mockCode: result.mockCode,
-    };
+    return this.authService.register(body, ipAddress);
   }
 
-  @Post('otp/verify')
+  /**
+   * Section 1.2: Sign Up (Screen 2) — Verify Email OTP -> Get Setup Token
+   */
+  @Post('verify-signup-otp')
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(
-    @Body(new ZodValidationPipe(OtpVerifySchema)) body: OtpVerify,
+  async verifySignupOtp(
+    @Body(new ZodValidationPipe(VerifySignupOtpSchema)) body: VerifySignupOtpInput,
+  ) {
+    return this.authService.verifySignupOtp(body);
+  }
+
+  /**
+   * Section 1.2: Sign Up (Screen 3) — Create Password & Start First Session
+   */
+  @Post('create-password')
+  @HttpCode(HttpStatus.OK)
+  async createPassword(
+    @Body(new ZodValidationPipe(CreatePasswordSchema)) body: CreatePasswordInput,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const userAgent = req.headers['user-agent'];
     const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
 
-    const { user, token, isNewUser } = await this.authService.verifyAndAuthenticate(
-      body.phone,
-      body.code,
+    const { user, token, isNewUser } = await this.authService.createPassword(
+      body,
       userAgent,
       ipAddress,
     );
 
-    // Set secure HTTP-only cookie
+    this.setSessionCookie(res, token);
+
+    return {
+      success: true,
+      user,
+      token,
+      isNewUser,
+    };
+  }
+
+  /**
+   * Section 1.3: Sign In — Email and Password ONLY (NO OTP AT LOGIN)
+   */
+  @Post(['login', 'sign-in'])
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body(new ZodValidationPipe(SignInRequestSchema)) body: SignInRequest,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const userAgent = req.headers['user-agent'];
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+
+    const { user, token } = await this.authService.login(body, userAgent, ipAddress);
+
+    this.setSessionCookie(res, token);
+
+    return {
+      success: true,
+      user,
+      token,
+    };
+  }
+
+  /**
+   * Section 1.4: Forgot Password Request (OTP to Email)
+   */
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(
+    @Body(new ZodValidationPipe(ForgotPasswordRequestSchema)) body: ForgotPasswordRequest,
+    @Req() req: Request,
+  ) {
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    return this.authService.forgotPassword(body, ipAddress);
+  }
+
+  /**
+   * Section 1.4: Reset Password (Verify OTP + Set New Password)
+   */
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Body(new ZodValidationPipe(ResetPasswordSchema)) body: ResetPasswordInput,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const userAgent = req.headers['user-agent'];
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+
+    const { user, token } = await this.authService.resetPassword(body, userAgent, ipAddress);
+
+    this.setSessionCookie(res, token);
+
+    return {
+      success: true,
+      user,
+      token,
+      message: 'Your password has been reset successfully.',
+    };
+  }
+
+  /**
+   * Current Authenticated User (Me)
+   */
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async getMe(@CurrentUser() user: any) {
+    return this.authService.formatUserDto(user);
+  }
+
+  /**
+   * Logout: Revokes server session and clears cookie
+   */
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(
+    @CurrentSessionToken() token: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (token) {
+      await this.authService.logout(token);
+    }
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.clearCookie(this.COOKIE_NAME, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+    });
+    return { success: true, message: 'Logged out successfully' };
+  }
+
+  private setSessionCookie(res: Response, token: string) {
     const isProduction = process.env.NODE_ENV === 'production';
     res.cookie(this.COOKIE_NAME, token, {
       httpOnly: true,
@@ -80,52 +191,5 @@ export class AuthController {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       path: '/',
     });
-
-    return {
-      success: true,
-      token, // Also returned in JSON for PWA offline or authorization headers
-      isNewUser,
-      user: {
-        id: user.id,
-        phone: user.phone,
-        phoneVerified: !!user.phoneVerifiedAt,
-        role: user.role,
-        countryCode: user.countryCode,
-        locale: user.locale,
-        customerProfile: user.customerProfile,
-        providerProfile: user.providerProfile,
-      },
-    };
-  }
-
-  @Post('sign-out')
-  @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.OK)
-  async signOut(
-    @CurrentSessionToken() token: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    await this.authService.revokeSession(token);
-    res.clearCookie(this.COOKIE_NAME, { path: '/' });
-    return { success: true, message: 'Signed out successfully' };
-  }
-
-  @Get('sessions')
-  @UseGuards(AuthGuard)
-  async getSessions(
-    @CurrentUser() user: User,
-    @CurrentSessionToken() currentToken: string,
-  ) {
-    return this.authService.listUserSessions(user.id, currentToken);
-  }
-
-  @Post('sessions/revoke-others')
-  @UseGuards(AuthGuard)
-  async revokeOtherSessions(
-    @CurrentUser() user: User,
-    @CurrentSessionToken() currentToken: string,
-  ) {
-    return this.authService.revokeOtherSessions(user.id, currentToken);
   }
 }
-

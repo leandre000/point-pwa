@@ -6,7 +6,7 @@ import {
   type ProviderSearchQuery,
 } from '@kiraka/contracts';
 
-@Controller('providers')
+@Controller(['providers', 'discovery/providers'])
 export class DiscoveryController {
   constructor(private readonly discoveryService: DiscoveryService) {}
 

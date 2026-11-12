@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { JobsService } from './jobs.service.js';
 import { AuthGuard } from '../../common/guards/auth.guard.js';
+import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import {
@@ -36,8 +37,12 @@ export class JobsController {
   }
 
   @Get()
-  async getJobsFeed(@Query(new ZodValidationPipe(JobFeedQuerySchema)) query: JobFeedQuery) {
-    return this.jobsService.getJobsFeed(query);
+  @UseGuards(OptionalAuthGuard)
+  async getJobsFeed(
+    @Query(new ZodValidationPipe(JobFeedQuerySchema)) query: JobFeedQuery,
+    @CurrentUser() user?: User,
+  ) {
+    return this.jobsService.getJobsFeed(query, user?.id);
   }
 
   @Get('my')
@@ -47,8 +52,9 @@ export class JobsController {
   }
 
   @Get(':id')
-  async getJobById(@Param('id') id: string) {
-    return this.jobsService.getJobById(id);
+  @UseGuards(OptionalAuthGuard)
+  async getJobById(@Param('id') id: string, @CurrentUser() user?: User) {
+    return this.jobsService.getJobById(id, user?.id);
   }
 
   @Post(':id/cancel')
@@ -58,3 +64,4 @@ export class JobsController {
     return this.jobsService.cancelJob(id, user.id);
   }
 }
+

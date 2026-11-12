@@ -29,6 +29,15 @@ export class AuthGuard implements CanActivate {
     }
 
     const { user, session } = await this.authService.validateSession(token);
+
+    // Rule D-015 & Section 1.2: Accounts must be ACTIVE and email-verified before a session exists
+    if (!user || !user.isActive || user.status === 'PENDING_VERIFICATION' || user.status === 'PENDING_PASSWORD') {
+      throw new UnauthorizedException('Account verification and password creation required (Rule D-015).');
+    }
+    if (!user.emailVerifiedAt) {
+      throw new UnauthorizedException('No verified email found. Account verification required.');
+    }
+
     request.user = user;
     request.session = session;
     request.sessionToken = token;

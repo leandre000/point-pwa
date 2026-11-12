@@ -60,6 +60,9 @@ describe('JobsService', () => {
       budgetCurrency: 'RWF',
       budgetNegotiable: true,
       timingPreference: 'Today morning',
+      windowType: 'asap',
+      timezone: 'Africa/Kigali',
+      photos: [],
     });
 
     expect(result.id).toBe('job-1');
@@ -79,6 +82,11 @@ describe('JobsService', () => {
         areaId: 'area-1',
         title: 'Spam request',
         description: 'Trying to flood the marketplace with requests.',
+        budgetCurrency: 'RWF',
+        budgetNegotiable: true,
+        windowType: 'asap',
+        timezone: 'Africa/Kigali',
+        photos: [],
       }),
     ).rejects.toThrowError(/reached the daily limit/);
   });
@@ -95,3 +103,4 @@ describe('JobsService', () => {
     );
   });
 });
+

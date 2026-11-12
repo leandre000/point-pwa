@@ -9,8 +9,10 @@ import type { SmsProvider, SendSmsOptions, SmsSendResult } from './sms-provider.
 export class MockSmsProvider implements SmsProvider {
   readonly name = 'mock';
   private readonly logger = new Logger(MockSmsProvider.name);
+  public sentMessages: SendSmsOptions[] = [];
 
   async sendSms({ to, message }: SendSmsOptions): Promise<SmsSendResult> {
+    this.sentMessages.push({ to, message });
     this.logger.log(`\n========================================\n[SMS MOCK] To: ${to}\nMessage: ${message}\n========================================\n`);
     return {
       success: true,

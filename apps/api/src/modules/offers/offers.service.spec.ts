@@ -38,6 +38,7 @@ describe('OffersService (Critical Marketplace Rules)', () => {
       service.submitOffer('user-same', {
         jobId: 'job-1',
         priceAmount: 15000,
+        priceCurrency: 'RWF',
         message: 'I want to offer on my own job',
       }),
     ).rejects.toThrowError(/cannot submit an offer on your own job request/);
@@ -139,3 +140,4 @@ describe('OffersService (Critical Marketplace Rules)', () => {
     });
   });
 });
+
