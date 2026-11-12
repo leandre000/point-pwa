@@ -2,10 +2,10 @@
   "name": "kiraka",
   "private": true,
   "version": "0.1.0",
-  "description": "KIRAKA — Find help. Discover opportunity. A Rwanda-first local services marketplace.",
+  "description": "KIRAKA \u2014 Find help. Discover opportunity. A Rwanda-first local services marketplace.",
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
+    "dev": "node init && turbo dev",
+    "build": "node init && turbo build",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
@@ -26,12 +26,16 @@
     "typescript": "^5.7.0"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": ["eslint --fix", "prettier --write"],
-    "*.{json,md,css}": ["prettier --write"]
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   },
   "packageManager": "pnpm@10.10.0",
   "engines": {
     "node": ">=20.0.0"
   }
 }
-

@@ -12,13 +12,10 @@ build/
 next-env.d.ts
 
 # Environment
-.env
-.env.local
 .env.*.local
 
 # IDE
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
@@ -54,3 +51,4 @@ docs/reference/
 *.zip
 scratch/
 
+config.bat
