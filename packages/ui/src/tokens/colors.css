@@ -37,10 +37,14 @@
   --color-green-800: #123B2C;
   --color-green-900: #0C2B20;
 
-  /* ─── Accent (amber) ─── */
-  --color-accent: #C98A1B;
+  /* ─── Accent (sunrise amber) ─── */
+  --color-accent: #E0A12B;
   --color-accent-text: #8A5A00;
   --color-accent-tint: #FBF1DC;
+
+  /* ─── Clay (Rwandan warmth) ─── */
+  --color-clay: #B4532A;
+  --color-clay-tint: #F8EAE2;
 
   /* ─── Semantic: Info ─── */
   --color-info: #2B6CB0;
@@ -80,10 +84,14 @@
   --color-primary-tint: #17271F;
   --color-on-primary: #0C2B20;
 
-  /* ─── Accent (amber) ─── */
-  --color-accent: #E0A83A;
+  /* ─── Accent (sunrise amber) ─── */
+  --color-accent: #E8B957;
   --color-accent-text: #E8B957;
   --color-accent-tint: #2B2312;
+
+  /* ─── Clay (Rwandan warmth) ─── */
+  --color-clay: #E08A63;
+  --color-clay-tint: #2C1A13;
 
   /* ─── Semantic: Info ─── */
   --color-info: #7FB0E8;

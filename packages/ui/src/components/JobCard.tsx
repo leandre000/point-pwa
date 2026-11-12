@@ -125,3 +125,4 @@ export const JobCard: React.FC<JobCardProps> = ({
   );
 };
 JobCard.displayName = 'JobCard';
+

@@ -13,6 +13,9 @@ import { BottomNav } from './BottomNav.js';
 import { TopAppBar } from './TopAppBar.js';
 import { EmptyState } from './EmptyState.js';
 import { ErrorState } from './ErrorState.js';
+import { CategoryTile } from './CategoryTile.js';
+import { Logo } from './Logo.js';
+import { HeroBanner } from './HeroBanner.js';
 
 describe('UI Foundation Components', () => {
   describe('Button', () => {
@@ -119,11 +122,11 @@ describe('UI Foundation Components', () => {
       const handleSelect = vi.fn();
       render(<BottomNav activeId="home" onSelect={handleSelect} />);
       expect(screen.getByLabelText(/main navigation/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /home/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /jobs/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /post/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /messages/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /me/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^home$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^jobs$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^post$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^messages$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^me$/i })).toBeInTheDocument();
     });
   });
 
@@ -179,6 +182,59 @@ describe('UI Foundation Components', () => {
       ).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: /try again/i }));
       expect(handleRetry).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('CategoryTile', () => {
+    it('renders category tile with custom label and count', () => {
+      const handleClick = vi.fn();
+      render(
+        <CategoryTile
+          category="plumbing"
+          label="Plumbing Services"
+          count="12 available"
+          onClick={handleClick}
+        />,
+      );
+      const btn = screen.getByRole('button', { name: /plumbing services/i });
+      expect(btn).toBeInTheDocument();
+      expect(screen.getByText('12 available')).toBeInTheDocument();
+      fireEvent.click(btn);
+      expect(handleClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('toggles aria-pressed when selected', () => {
+      const { rerender } = render(<CategoryTile category="cleaning" selected={false} />);
+      expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'false');
+
+      rerender(<CategoryTile category="cleaning" selected={true} />);
+      expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+    });
+  });
+
+  describe('Logo', () => {
+    it('renders KIRAKA wordmark and tagline', () => {
+      render(<Logo variant="full" />);
+      expect(screen.getByText('KIRAKA')).toBeInTheDocument();
+      expect(screen.getByText(/find help\. discover opportunity\./i)).toBeInTheDocument();
+    });
+
+    it('renders mark only without text', () => {
+      render(<Logo variant="mark" />);
+      expect(screen.queryByText('KIRAKA')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('HeroBanner', () => {
+    it('renders Kigali area badge, tagline, and children', () => {
+      render(
+        <HeroBanner areaName="Kacyiru, Gasabo" tagline="Find reliable help">
+          <button>Post Now</button>
+        </HeroBanner>,
+      );
+      expect(screen.getByText('Kacyiru, Gasabo')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Find reliable help');
+      expect(screen.getByRole('button', { name: /post now/i })).toBeInTheDocument();
     });
   });
 });

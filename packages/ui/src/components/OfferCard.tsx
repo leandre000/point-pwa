@@ -121,20 +121,34 @@ export const OfferCard: React.FC<OfferCardProps> = ({
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
-        {canCounter && onCounter && (
-          <Button variant="secondary" size="sm" onClick={onCounter}>
-            Counter
-          </Button>
-        )}
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--color-border)]">
+        <div>
+          {status === 'ACCEPTED' ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#E8F1EC] text-[#1F513F]">
+              ✓ Accepted Offer
+            </span>
+          ) : (
+            <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase tracking-wider font-semibold">
+              {status}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {canCounter && onCounter && status !== 'ACCEPTED' && (
+            <Button variant="secondary" size="sm" onClick={onCounter}>
+              Counter
+            </Button>
+          )}
 
-        {canAccept && onAccept && (
-          <Button variant="primary" size="sm" onClick={onAccept}>
-            Accept {priceAmount.toLocaleString()} {priceCurrency}
-          </Button>
-        )}
+          {canAccept && onAccept && status !== 'ACCEPTED' && (
+            <Button variant="primary" size="sm" onClick={onAccept}>
+              Accept {priceAmount.toLocaleString()} {priceCurrency}
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   );
 };
 OfferCard.displayName = 'OfferCard';
+
