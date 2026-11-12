@@ -33,9 +33,50 @@ export default function JobsPage() {
 
   const [activeTab, setActiveTab] = React.useState<'open' | 'my_offers' | 'my_requests'>('open');
   const [search, setSearch] = React.useState('');
+  const [selectedCategory, setSelectedCategory] = React.useState<string>('all');
+  const [selectedArea, setSelectedArea] = React.useState<string>('all');
+  const [selectedBudgetRange, setSelectedBudgetRange] = React.useState<'all' | 'under10k' | '10k-25k' | '25k-plus'>('all');
+  const [filterSheetOpen, setFilterSheetOpen] = React.useState<boolean>(false);
   const [jobs, setJobs] = React.useState<JobData[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+
+  const CATEGORIES = [
+    { id: 'all', label: 'All Services' },
+    { id: 'plumbing', label: 'Plumbing' },
+    { id: 'electrical', label: 'Electrical' },
+    { id: 'cleaning', label: 'Cleaning' },
+    { id: 'carpentry', label: 'Carpentry' },
+    { id: 'maintenance', label: 'General Maintenance' },
+  ];
+
+  const KIGALI_NEIGHBORHOODS = [
+    'All Areas',
+    'Kacyiru',
+    'Remera',
+    'Kimihurura',
+    'Kibagabaga',
+    'Nyarutarama',
+    'Kimironko',
+    'Gisozi',
+    'Kicukiro',
+    'Gikondo',
+    'Kanombe',
+    'Nyamirambo',
+    'Kagugu',
+  ];
+
+  const activeFilterCount =
+    (selectedCategory !== 'all' ? 1 : 0) +
+    (selectedArea !== 'all' ? 1 : 0) +
+    (selectedBudgetRange !== 'all' ? 1 : 0);
+
+  const resetFilters = () => {
+    setSelectedCategory('all');
+    setSelectedArea('all');
+    setSelectedBudgetRange('all');
+    setSearch('');
+  };
 
   const fetchJobs = React.useCallback(async () => {
     setLoading(true);
@@ -90,6 +131,23 @@ export default function JobsPage() {
       const matchCat = job.categoryName.toLowerCase().includes(s);
       const matchArea = job.areaName.toLowerCase().includes(s);
       if (!matchTitle && !matchCat && !matchArea) return false;
+    }
+
+    if (selectedCategory !== 'all') {
+      const matchCat = job.categoryName.toLowerCase().includes(selectedCategory.toLowerCase());
+      if (!matchCat) return false;
+    }
+
+    if (selectedArea !== 'all' && selectedArea !== 'All Areas') {
+      const matchArea = job.areaName.toLowerCase().includes(selectedArea.toLowerCase());
+      if (!matchArea) return false;
+    }
+
+    if (selectedBudgetRange !== 'all') {
+      const amt = job.budgetAmount || 0;
+      if (selectedBudgetRange === 'under10k' && amt >= 10000) return false;
+      if (selectedBudgetRange === '10k-25k' && (amt < 10000 || amt > 25000)) return false;
+      if (selectedBudgetRange === '25k-plus' && amt < 25000) return false;
     }
 
     if (activeTab === 'open') {

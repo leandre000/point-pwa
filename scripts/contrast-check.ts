@@ -22,6 +22,8 @@ interface ThemeColors {
   accent: string;
   'accent-text': string;
   'accent-tint': string;
+  clay: string;
+  'clay-tint': string;
   info: string;
   'info-tint': string;
   success: string;
@@ -42,9 +44,11 @@ const light: ThemeColors = {
   primary: '#205641',
   'on-primary': '#FFFFFF',
   'primary-tint': '#EEF5F0',
-  accent: '#C98A1B',
+  accent: '#E0A12B',
   'accent-text': '#8A5A00',
   'accent-tint': '#FBF1DC',
+  clay: '#A0441E',
+  'clay-tint': '#F8EAE2',
   info: '#2B6CB0',
   'info-tint': '#E8F0FA',
   success: '#286C49',
@@ -65,9 +69,11 @@ const dark: ThemeColors = {
   primary: '#6CC49A',
   'on-primary': '#0C2B20',
   'primary-tint': '#17271F',
-  accent: '#E0A83A',
+  accent: '#E8B957',
   'accent-text': '#E8B957',
   'accent-tint': '#2B2312',
+  clay: '#E08A63',
+  'clay-tint': '#2C1A13',
   info: '#7FB0E8',
   'info-tint': '#14202E',
   success: '#6CC49A',
@@ -133,6 +139,7 @@ const pairs: ContrastPair[] = [
 
   // Semantic colors on their tints
   { fg: 'accent-text', bg: 'accent-tint', minRatio: 4.5, label: 'Accent text on accent tint' },
+  { fg: 'clay', bg: 'clay-tint', minRatio: 4.5, label: 'Clay on clay tint' },
   { fg: 'info', bg: 'info-tint', minRatio: 4.5, label: 'Info on info tint' },
   { fg: 'success', bg: 'success-tint', minRatio: 4.5, label: 'Success on success tint' },
   { fg: 'warning', bg: 'warning-tint', minRatio: 4.5, label: 'Warning on warning tint' },

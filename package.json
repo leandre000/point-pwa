@@ -14,6 +14,8 @@
     "test:e2e": "turbo test:e2e",
     "check:contrast": "turbo check:contrast",
     "check:i18n": "turbo check:i18n",
+    "db:reset:clean": "node scripts/db-reset-clean.mjs",
+    "guard:forbidden": "node scripts/ci-guard-forbidden.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -8,6 +8,8 @@ dist/
 .turbo/
 out/
 build/
+*.tsbuildinfo
+next-env.d.ts
 
 # Environment
 .env
@@ -42,4 +44,9 @@ logs/
 packages/contracts/dist/
 packages/ui/dist/
 packages/config/dist/
+
+# Assets & References
+docs/reference/
+*.zip
+scratch/
 
