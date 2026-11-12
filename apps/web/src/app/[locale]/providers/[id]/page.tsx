@@ -157,11 +157,11 @@ export default function ProviderProfilePage() {
               <div className="mt-2 flex items-center gap-2">
                 <Badge
                   status="open"
-                  label="Phone Verified"
+                  label="Email Verified"
                   icon={ShieldCheck}
                 />
                 <span className="text-[11px] text-[var(--color-text-tertiary)]">
-                  (BR-12 Verified)
+                  (Email Confirmed)
                 </span>
               </div>
             </div>

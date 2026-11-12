@@ -12,14 +12,17 @@ interface DisputeItem {
   resolution?: string;
   resolvedAt?: string | null;
   createdAt: string;
-  job: {
+  job?: {
     id: string;
     title: string;
   };
+  jobTitle?: string;
   raisedBy: {
     id: string;
-    phone: string;
-    name: string;
+    email?: string;
+    phone?: string;
+    name?: string;
+    displayName?: string;
   };
 }
 
@@ -133,10 +136,14 @@ export default function DisputesQueuePage() {
                   </div>
 
                   <h3 className="text-base font-bold text-[var(--text)] mt-1.5">
-                    {dispute.job.title}
+                    {dispute.job?.title || dispute.jobTitle || 'Job Title Unavailable'}
                   </h3>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    Raised by: <strong className="text-[var(--text)]">{dispute.raisedBy.name}</strong> ({dispute.raisedBy.phone})
+                    Raised by:{' '}
+                    <strong className="text-[var(--text)]">
+                      {dispute.raisedBy.name || dispute.raisedBy.displayName || 'User'}
+                    </strong>
+                    {dispute.raisedBy.email ? ` (${dispute.raisedBy.email})` : dispute.raisedBy.phone ? ` (${dispute.raisedBy.phone})` : ''}
                   </p>
                 </div>
 

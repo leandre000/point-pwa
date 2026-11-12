@@ -189,6 +189,7 @@ export class AdminService {
             raisedBy: {
               select: {
                 id: true,
+                email: true,
                 phone: true,
                 customerProfile: true,
                 providerProfile: true,
@@ -213,11 +214,20 @@ export class AdminService {
           resolution: d.resolution,
           resolvedAt: d.resolvedAt?.toISOString() || null,
           createdAt: d.createdAt.toISOString(),
+          job: {
+            id: d.match.job.id,
+            title: d.match.job.title,
+          },
           jobTitle: d.match.job.title,
           agreedPrice: Number(d.match.agreedPriceAmount),
           currency: d.match.agreedPriceCurrency,
           raisedBy: {
             id: d.raisedBy.id,
+            email: d.raisedBy.email,
+            name:
+              d.raisedBy.customerProfile?.displayName ||
+              d.raisedBy.providerProfile?.businessName ||
+              'User',
             displayName:
               d.raisedBy.customerProfile?.displayName ||
               d.raisedBy.providerProfile?.businessName ||
@@ -386,6 +396,8 @@ export class AdminService {
     if (search && search.trim()) {
       const q = search.trim();
       where.OR = [
+        { email: { contains: q, mode: 'insensitive' } },
+        { fullName: { contains: q, mode: 'insensitive' } },
         { phone: { contains: q } },
         { customerProfile: { displayName: { contains: q, mode: 'insensitive' } } },
         { providerProfile: { businessName: { contains: q, mode: 'insensitive' } } },

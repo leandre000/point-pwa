@@ -5,7 +5,8 @@ import { apiClient } from '@/lib/api-client.js';
 
 interface UserRecord {
   id: string;
-  phone: string;
+  email: string;
+  phone?: string | null;
   name: string;
   role: 'CUSTOMER' | 'PROVIDER' | 'BOTH';
   verificationLevel: string;
@@ -44,7 +45,7 @@ export default function UsersManagementPage() {
   const handleToggleSuspend = async (user: UserRecord) => {
     if (user.isActive) {
       const reason = prompt(
-        `Suspend ${user.name} (${user.phone})? This will immediately terminate all active sessions. Enter reason:`,
+        `Suspend ${user.name} (${user.email})? This will immediately terminate all active sessions. Enter reason:`,
         'Administrative suspension for platform policy violation',
       );
       if (!reason) return;
@@ -54,19 +55,19 @@ export default function UsersManagementPage() {
           method: 'POST',
           body: JSON.stringify({ reason }),
         });
-        alert(`User ${user.phone} suspended.`);
+        alert(`User ${user.email} suspended.`);
         fetchUsers(search);
       } catch (err: any) {
         alert(err.message || 'Failed to suspend user.');
       }
     } else {
-      if (!confirm(`Restore ${user.name} (${user.phone}) to active status?`)) return;
+      if (!confirm(`Restore ${user.name} (${user.email}) to active status?`)) return;
 
       try {
         await apiClient(`/api/v1/admin/users/${user.id}/unsuspend`, {
           method: 'POST',
         });
-        alert(`User ${user.phone} restored.`);
+        alert(`User ${user.email} restored.`);
         fetchUsers(search);
       } catch (err: any) {
         alert(err.message || 'Failed to restore user.');
@@ -86,10 +87,10 @@ export default function UsersManagementPage() {
 
         <input
           type="search"
-          placeholder="Search by phone or name..."
+          placeholder="Search by email, name, or phone..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-10 px-3.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text)] w-64 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          className="h-10 px-3.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text)] w-72 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
         />
       </div>
 
@@ -103,7 +104,7 @@ export default function UsersManagementPage() {
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="border-b border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-secondary)] font-semibold uppercase tracking-wider">
-              <th className="p-3.5">User</th>
+              <th className="p-3.5">User / Email</th>
               <th className="p-3.5">Phone</th>
               <th className="p-3.5">Role</th>
               <th className="p-3.5">Verification</th>
@@ -128,8 +129,11 @@ export default function UsersManagementPage() {
                     !u.isActive ? 'bg-[var(--danger-tint)]/20' : ''
                   }`}
                 >
-                  <td className="p-3.5 font-semibold text-[var(--text)]">{u.name}</td>
-                  <td className="p-3.5 font-mono text-[var(--text-secondary)]">{u.phone}</td>
+                  <td className="p-3.5">
+                    <div className="font-semibold text-[var(--text)]">{u.name}</div>
+                    <div className="text-[11px] text-[var(--text-secondary)] font-mono">{u.email}</div>
+                  </td>
+                  <td className="p-3.5 font-mono text-[var(--text-secondary)]">{u.phone || '—'}</td>
                   <td className="p-3.5">
                     <span
                       className={`px-2 py-0.5 rounded text-[10px] font-bold ${

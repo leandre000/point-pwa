@@ -77,7 +77,8 @@ interface JobDetail {
     displayName: string;
     neighborhood: string;
     avatarUrl: string | null;
-    isPhoneVerified: boolean;
+    isEmailVerified?: boolean;
+    isPhoneVerified?: boolean;
     jobsPostedCount: number;
     memberSince: string;
   } | null;
@@ -710,10 +711,10 @@ export default function JobDetailPage({
                 </div>
               </div>
 
-              {job.customer.isPhoneVerified && (
+              {(job.customer.isEmailVerified || job.customer.isPhoneVerified) && (
                 <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[12px] font-medium text-[var(--color-text-secondary)]">
                   <ShieldCheck className="h-4 w-4 text-[var(--color-primary)] shrink-0" />
-                  <span>Phone Verified</span>
+                  <span>Email Verified</span>
                 </div>
               )}
             </div>

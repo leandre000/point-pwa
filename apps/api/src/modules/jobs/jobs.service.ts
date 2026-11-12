@@ -444,6 +444,7 @@ export class JobsService {
         displayName: job.customer.customerProfile?.displayName || 'Customer',
         neighborhood: job.customer.customerProfile?.neighborhood || job.area?.name || 'Kigali',
         avatarUrl: job.customer.customerProfile?.avatarUrl || null,
+        isEmailVerified: Boolean(job.customer.emailVerifiedAt || job.customer.phoneVerifiedAt),
         isPhoneVerified: Boolean(job.customer.phoneVerifiedAt),
         jobsPostedCount: job.customer._count?.jobs || 1,
         memberSince: job.customer.createdAt ? (typeof job.customer.createdAt === 'string' ? job.customer.createdAt : job.customer.createdAt.toISOString()) : new Date().toISOString(),
