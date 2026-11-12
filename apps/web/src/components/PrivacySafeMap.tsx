@@ -155,26 +155,28 @@ export default function PrivacySafeMap({
             const el = document.createElement('div');
             el.className = 'kiraka-map-marker';
             const iconSvg = item.type === 'job'
-              ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>'
-              : '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:inline-block"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+              ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>'
+              : '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:inline-block;vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
 
             el.innerHTML = `
               <div style="
-                background: ${item.type === 'job' ? '#2563eb' : '#059669'};
-                color: white;
+                background: ${item.type === 'job' ? '#1E40AF' : '#15803D'};
+                color: #FFFFFF;
                 font-size: 11px;
                 font-weight: 700;
-                padding: 4px 8px;
+                padding: 4px 9px;
                 border-radius: 9999px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+                box-shadow: 0 3px 8px rgba(0,0,0,0.3);
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 gap: 5px;
                 white-space: nowrap;
+                border: 1.5px solid #FFFFFF;
+                font-family: inherit;
               ">
                 ${iconSvg}
-                <span>${item.areaName.split(',')[0]}</span>
+                <span>${item.priceOrRating || item.areaName.split(',')[0]}</span>
               </div>
             `;
             el.onclick = () => {
