@@ -107,14 +107,20 @@ export default function MePage() {
             <Button
               variant="primary"
               className="w-full py-3 text-sm font-semibold"
-              onClick={() => router.push('/auth')}
+              onClick={() => {
+                sessionStorage.setItem('kiraka_auth_return_url', '/me');
+                router.push('/auth');
+              }}
             >
               Sign in
             </Button>
             <Button
               variant="secondary"
               className="w-full py-3 text-sm font-semibold"
-              onClick={() => router.push('/auth?mode=register')}
+              onClick={() => {
+                sessionStorage.setItem('kiraka_auth_return_url', '/me');
+                router.push('/auth?mode=register');
+              }}
             >
               Create an account
             </Button>

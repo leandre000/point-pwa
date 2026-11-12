@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client.js';
 import { useAuth } from '@/lib/auth-context.js';
+import { useAuthGate } from '@/components/AuthGate.js';
 
 interface JobDetail {
   id: string;
@@ -121,6 +122,7 @@ export default function JobDetailPage({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { openAuthGate } = useAuthGate();
   const resolvedParams = React.use(params);
   const jobId = resolvedParams.id;
 
@@ -175,6 +177,10 @@ export default function JobDetailPage({
   }, [jobId]);
 
   const toggleSave = () => {
+    if (!user) {
+      openAuthGate('Sign in to bookmark this job to your saved list.', `/jobs/${jobId}`);
+      return;
+    }
     try {
       const saved = JSON.parse(localStorage.getItem('kiraka_saved_jobs') || '[]');
       let updated: string[];
@@ -960,7 +966,12 @@ export default function JobDetailPage({
               variant="primary"
               size="lg"
               className="w-full flex items-center justify-center gap-2"
-              onClick={() => router.push('/auth')}
+              onClick={() =>
+                openAuthGate(
+                  'Sign in to make an offer or hire a Kigali specialist for this request.',
+                  `/jobs/${job.id}`,
+                )
+              }
             >
               <span>Sign In to Make an Offer or Hire</span>
               <ArrowRight className="h-4 w-4" />

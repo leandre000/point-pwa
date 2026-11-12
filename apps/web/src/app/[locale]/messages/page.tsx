@@ -112,7 +112,10 @@ export default function MessagesInboxPage() {
               variant="primary"
               size="lg"
               className="w-full"
-              onClick={() => router.push('/auth')}
+              onClick={() => {
+                sessionStorage.setItem('kiraka_auth_return_url', '/messages');
+                router.push('/auth');
+              }}
             >
               Sign In to Continue
             </Button>
