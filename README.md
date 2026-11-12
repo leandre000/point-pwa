@@ -74,13 +74,4 @@ pnpm lint
 
 ---
 
-## Core Marketplace Rules (from SRS)
-1. One account holds both customer and provider roles.
-2. Core marketplace is free at launch (0% commission, no paywalls).
-3. Exactly one active Match per job; immutable offer history.
-4. Completion reported ≠ completion confirmed. Customer confirmation is required.
-5. Reviews only after a confirmed completion.
-6. Coarse location by default; exact address shared only after a match by explicit customer action.
-7. Money stored strictly in integer minor units with ISO currency code (`RWF`).
-8. Critical actions (offer, accept, message, confirm completion) are never silently queued offline.
 
