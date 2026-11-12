@@ -74,6 +74,26 @@ export const NotificationType = {
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 
+// ─── Dispute Status & Reason (SRS §6.4) ───
+export const DisputeStatus = {
+  OPEN: 'OPEN',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  RESOLVED: 'RESOLVED',
+  DISMISSED: 'DISMISSED',
+} as const;
+export type DisputeStatus = (typeof DisputeStatus)[keyof typeof DisputeStatus];
+
+export const DisputeReason = {
+  POOR_QUALITY: 'POOR_QUALITY',
+  INCOMPLETE_WORK: 'INCOMPLETE_WORK',
+  NO_SHOW: 'NO_SHOW',
+  PAYMENT_DISPUTE: 'PAYMENT_DISPUTE',
+  PROPERTY_DAMAGE: 'PROPERTY_DAMAGE',
+  UNPROFESSIONAL_BEHAVIOR: 'UNPROFESSIONAL_BEHAVIOR',
+  OTHER: 'OTHER',
+} as const;
+export type DisputeReason = (typeof DisputeReason)[keyof typeof DisputeReason];
+
 // ─── Report Reason ───
 export const ReportReason = {
   SPAM: 'SPAM',

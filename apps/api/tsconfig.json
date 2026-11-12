@@ -2,6 +2,7 @@
   "extends": "@kiraka/config/typescript/nestjs.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "outDir": "./dist",
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -54,12 +54,30 @@ enum MatchStatus {
   DISPUTED
 }
 
-// ─── Users & Sessions ───
+enum UserStatus {
+  PENDING_VERIFICATION
+  PENDING_PASSWORD
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum VerificationPurpose {
+  SIGNUP_VERIFY
+  PASSWORD_RESET
+}
+
+// ─── Users & Sessions (D-017, D-018) ───
 
 model User {
   id              String            @id @default(uuid()) @db.Uuid
-  phone           String            @unique
-  phoneVerifiedAt DateTime?
+  email           String            @unique
+  emailVerifiedAt DateTime?
+  passwordHash    String?           // Argon2id hash, nullable for Google-only accounts
+  googleSub       String?           @unique
+  fullName        String            @default("") @db.VarChar(100)
+  phone           String?           // Optional, private field in personal details
+  status          UserStatus        @default(PENDING_VERIFICATION)
   role            UserRole          @default(USER)
   countryCode     String            @default("RW") @db.VarChar(2)
   locale          String            @default("en") @db.VarChar(5)
@@ -67,29 +85,62 @@ model User {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  customerProfile CustomerProfile?
-  providerProfile ProviderProfile?
-  sessions        UserSession[]
-  jobs            Job[]             @relation("CustomerJobs")
-  offers          Offer[]           @relation("ProviderOffers")
-  auditLogs       AuditLog[]
+  customerProfile   CustomerProfile?
+  providerProfile   ProviderProfile?
+  sessions          UserSession[]
+  verificationCodes VerificationCode[]
+  jobs              Job[]             @relation("CustomerJobs")
+  offers            Offer[]           @relation("ProviderOffers")
+  messages          Message[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  raisedDisputes    Dispute[]         @relation("RaisedDisputes")
+  authoredReviews   Review[]          @relation("AuthoredReviews")
+  receivedReviews   Review[]          @relation("ReceivedReviews")
+  filedReports      UserReport[]      @relation("FiledReports")
+  receivedReports   UserReport[]      @relation("ReceivedReports")
+  blocksInitiated   UserBlock[]       @relation("UserBlocksInitiated")
+  blocksReceived    UserBlock[]       @relation("UserBlocksReceived")
 
-  @@index([phone])
+  @@index([email])
+  @@index([googleSub])
   @@index([countryCode])
 }
 
 model UserSession {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  token     String   @unique
-  userAgent String?
-  ipAddress String?
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  token        String    @unique
+  refreshToken String?   @unique
+  deviceLabel  String?
+  userAgent    String?
+  ipAddress    String?
+  lastUsedAt   DateTime  @default(now())
+  revokedAt    DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([token])
+}
+
+model VerificationCode {
+  id         String              @id @default(uuid()) @db.Uuid
+  userId     String?             @db.Uuid
+  email      String
+  purpose    VerificationPurpose
+  codeHash   String              // HMAC-SHA256 with salt
+  salt       String
+  expiresAt  DateTime
+  attempts   Int                 @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime            @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email, purpose])
 }
 
 // ─── Profiles ───
@@ -125,16 +176,18 @@ model ProviderProfile {
 // ─── Marketplace Core ───
 
 model ServiceCategory {
-  id          String   @id @default(uuid()) @db.Uuid
-  slug        String   @unique
-  nameEn      String
-  nameRw      String
-  nameFr      String
-  iconName    String
-  isActive    Boolean  @default(true)
-  displayOrder Int     @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid()) @db.Uuid
+  slug         String   @unique
+  nameEn       String
+  nameRw       String
+  nameFr       String
+  description  String?  @db.VarChar(500)
+  iconName     String   @default("Sparkles")
+  coverPhotoUrl String?
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   jobs Job[]
 }
@@ -159,6 +212,7 @@ model Job {
   title            String      @db.VarChar(200)
   description      String      @db.VarChar(2000)
   status           JobStatus   @default(OPEN)
+  addressNotes     String?     @db.VarChar(200)
   
   // Money stored strictly as integer minor units (RWF has 0 decimal digits, minor unit = franc)
   budgetAmount     BigInt?
@@ -166,6 +220,9 @@ model Job {
   budgetNegotiable Boolean     @default(true)
 
   timingPreference String?     @db.VarChar(200)
+  startsAt         DateTime?
+  windowType       String?     @default("asap")
+  timezone         String?     @default("Africa/Kigali")
   expiresAt        DateTime?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -250,15 +307,90 @@ model Match {
   acceptedAt    DateTime    @default(now())
   completedAt   DateTime?
   cancelledAt   DateTime?
+  completionNotes String?   @db.VarChar(1000)
+  completionPhotoUrl String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   job   Job   @relation(fields: [jobId], references: [id], onDelete: Restrict)
   offer Offer @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  conversation Conversation?
+  dispute      Dispute?
+  reviews      Review[]
 
   @@index([jobId])
   @@index([offerId])
   @@index([status])
+}
+
+// ─── Messaging & Notifications ───
+
+model Conversation {
+  id        String    @id @default(uuid()) @db.Uuid
+  matchId   String    @unique @db.Uuid
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  match    Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([matchId])
+}
+
+enum MessageType {
+  TEXT
+  ADDRESS_SHARE
+  SYSTEM
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @db.Uuid
+  senderId       String      @db.Uuid
+  content        String      @db.VarChar(2000)
+  type           MessageType @default(TEXT)
+  readAt         DateTime?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([conversationId])
+  @@index([senderId])
+}
+
+enum NotificationType {
+  NEW_OFFER
+  COUNTER_OFFER
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  OFFER_WITHDRAWN
+  MATCH_CREATED
+  MATCH_CANCELLED
+  NEW_MESSAGE
+  COMPLETION_REPORTED
+  COMPLETION_CONFIRMED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+  NEW_REVIEW
+  REMINDER
+}
+
+model Notification {
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @db.Uuid
+  type       NotificationType
+  title      String           @db.VarChar(100)
+  body       String           @db.VarChar(500)
+  entityType String?          @db.VarChar(50)
+  entityId   String?          @db.VarChar(100)
+  isRead     Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
 
 // ─── Auditing ───
@@ -280,4 +412,120 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
+
+// ─── Disputes & Reviews (M6) ───
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum DisputeReason {
+  POOR_QUALITY
+  INCOMPLETE_WORK
+  NO_SHOW
+  PAYMENT_DISPUTE
+  PROPERTY_DAMAGE
+  UNPROFESSIONAL_BEHAVIOR
+  OTHER
+}
+
+model Dispute {
+  id           String        @id @default(uuid()) @db.Uuid
+  matchId      String        @unique @db.Uuid
+  raisedById   String        @db.Uuid
+  reason       DisputeReason
+  description  String        @db.VarChar(2000)
+  evidenceUrls String[]      @default([])
+  status       DisputeStatus @default(OPEN)
+  resolution   String?       @db.VarChar(2000)
+  resolvedAt   DateTime?
+  resolvedById String?       @db.Uuid
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  match    Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  raisedBy User  @relation("RaisedDisputes", fields: [raisedById], references: [id], onDelete: Restrict)
+
+  @@index([matchId])
+  @@index([status])
+  @@index([raisedById])
+}
+
+model Review {
+  id        String   @id @default(uuid()) @db.Uuid
+  matchId   String   @db.Uuid
+  authorId  String   @db.Uuid
+  targetId  String   @db.Uuid
+  rating    Int      // 1 to 5
+  tags      String[] @default([])
+  comment   String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  author User  @relation("AuthoredReviews", fields: [authorId], references: [id], onDelete: Restrict)
+  target User  @relation("ReceivedReviews", fields: [targetId], references: [id], onDelete: Restrict)
+
+  @@unique([matchId, authorId])
+  @@index([targetId])
+  @@index([matchId])
+}
+
+// ─── Safety, Reports & Blocks (M7) ───
+
+enum ReportReason {
+  SPAM
+  INAPPROPRIATE_CONTENT
+  HARASSMENT
+  FRAUD
+  SAFETY_CONCERN
+  FAKE_PROFILE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
+}
+
+model UserReport {
+  id           String       @id @default(uuid()) @db.Uuid
+  reporterId   String       @db.Uuid
+  targetUserId String?      @db.Uuid
+  targetJobId  String?      @db.Uuid
+  reason       ReportReason
+  details      String       @db.VarChar(2000)
+  status       ReportStatus @default(PENDING)
+  notes        String?      @db.VarChar(2000)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  reporter   User  @relation("FiledReports", fields: [reporterId], references: [id], onDelete: Restrict)
+  targetUser User? @relation("ReceivedReports", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([reporterId])
+  @@index([targetUserId])
+  @@index([status])
+}
+
+model UserBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  blockerId String   @db.Uuid
+  blockedId String   @db.Uuid
+  reason    String?  @db.VarChar(200)
+  createdAt DateTime @default(now())
+
+  blocker User @relation("UserBlocksInitiated", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("UserBlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
 

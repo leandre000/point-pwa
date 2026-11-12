@@ -7,3 +7,7 @@ export * from './enums.js';
 export * from './jobs.js';
 export * from './offers.js';
 export * from './discovery.js';
+export * from './messaging.js';
+export * from './completion.js';
+export * from './safety.js';
+export * from './uploads.js';

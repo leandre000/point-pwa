@@ -2,7 +2,10 @@
   "extends": "@kiraka/config/typescript/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "verbatimModuleSyntax": false
   },
   "include": ["src"]
 }

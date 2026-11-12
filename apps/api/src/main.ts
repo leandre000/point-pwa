@@ -9,7 +9,12 @@ async function bootstrap() {
   const logger = new Logger('KIRAKA-API');
   const app = await NestFactory.create(AppModule, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+      origin: [
+        'http://localhost:3000',
+        'http://localhost:3002',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3002',
+      ],
       credentials: true,
     },
   });

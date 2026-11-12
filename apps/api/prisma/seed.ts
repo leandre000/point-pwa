@@ -1,51 +1,67 @@
-import { PrismaClient, VerificationLevel } from '@prisma/client';
+import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { hash } from '@node-rs/argon2';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding KIRAKA Kigali Demo Database...');
+  console.log('Seeding KIRAKA Clean Reference Data & Super Admin (v5)...');
 
-  // 1. Initial Categories
+  // 1. Five Core Service Categories with Phosphor icons, descriptions, and cover photos (Section 7)
   const categories = [
     {
       slug: 'cleaning',
       nameEn: 'Cleaning & Housekeeping',
       nameRw: "Isuku n'isukura",
       nameFr: 'Nettoyage & Ménage',
-      iconName: 'Sparkles',
+      description: 'Regular and deep cleaning for homes and offices',
+      iconName: 'Broom',
+      coverPhotoUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=960&q=80',
       displayOrder: 1,
+      isActive: true,
     },
     {
       slug: 'plumbing',
       nameEn: 'Plumbing & Pipe Repair',
       nameRw: "Ubwubatsi bw'amazi",
       nameFr: 'Plomberie & Tuyauterie',
+      description: 'Pipe repairs, leak fixes, water heaters, and fixture installations',
       iconName: 'Wrench',
+      coverPhotoUrl: 'https://images.unsplash.com/photo-1505798577917-a65157d3320a?auto=format&fit=crop&w=960&q=80',
       displayOrder: 2,
+      isActive: true,
     },
     {
       slug: 'electrical',
       nameEn: 'Electrical & Appliances',
       nameRw: 'Amashanyarazi',
       nameFr: 'Électricité & Électroménager',
-      iconName: 'Zap',
+      description: 'Wiring, circuit breakers, lighting, and home appliances repair',
+      iconName: 'Lightning',
+      coverPhotoUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=960&q=80',
       displayOrder: 3,
+      isActive: true,
     },
     {
       slug: 'carpentry',
       nameEn: 'Carpentry & Furniture Repair',
       nameRw: "Ububaji n'ibikoresho",
       nameFr: 'Menuiserie & Meubles',
+      description: 'Custom woodworking, door fitting, and furniture repairs',
       iconName: 'Hammer',
+      coverPhotoUrl: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=960&q=80',
       displayOrder: 4,
+      isActive: true,
     },
     {
       slug: 'maintenance',
       nameEn: 'General Home Maintenance',
       nameRw: 'Gusana no kubungabunga',
       nameFr: 'Entretien général',
-      iconName: 'Shield',
+      description: 'Handyman repairs, wall painting, mountings, and property care',
+      iconName: 'Toolbox',
+      coverPhotoUrl: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=960&q=80',
       displayOrder: 5,
+      isActive: true,
     },
   ];
 
@@ -56,103 +72,87 @@ async function main() {
       create: cat,
     });
   }
+  console.log(`✓ Seeded ${categories.length} official service categories.`);
 
-  // 2. Initial Kigali Service Areas (Neighborhoods)
+  // 2. Kigali Launch Neighborhoods (Centroids documented in docs/ASSETS.md from OSM)
   const areas = [
-    { name: 'Remera', city: 'Kigali', countryCode: 'RW' },
-    { name: 'Kacyiru', city: 'Kigali', countryCode: 'RW' },
-    { name: 'Kimihurura', city: 'Kigali', countryCode: 'RW' },
-    { name: 'Nyamirambo', city: 'Kigali', countryCode: 'RW' },
-    { name: 'Kiyovu', city: 'Kigali', countryCode: 'RW' },
-    { name: 'Gikondo', city: 'Kigali', countryCode: 'RW' },
-    { name: 'Gisozi', city: 'Kigali', countryCode: 'RW' },
-    { name: 'Kibagabaga', city: 'Kigali', countryCode: 'RW' },
-    { name: 'Kanombe', city: 'Kigali', countryCode: 'RW' },
+    { name: 'Remera', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Kacyiru', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Kimihurura', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Nyamirambo', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Kiyovu', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Gikondo', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Gisozi', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Kibagabaga', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Kanombe', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Nyarutarama', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Kicukiro', city: 'Kigali', countryCode: 'RW', isActive: true },
+    { name: 'Kagugu', city: 'Kigali', countryCode: 'RW', isActive: true },
   ];
 
   for (const area of areas) {
     const existing = await prisma.serviceArea.findFirst({
       where: { name: area.name, city: area.city },
     });
-    if (!existing) {
+    if (existing) {
+      await prisma.serviceArea.update({
+        where: { id: existing.id },
+        data: { isActive: true },
+      });
+    } else {
       await prisma.serviceArea.create({ data: area });
     }
   }
+  console.log(`✓ Seeded ${areas.length} Kigali launch neighborhoods.`);
 
-  // 3. Demo Providers (clearly marked demo data)
-  const demoProviders = [
-    {
-      phone: '+250788000001',
-      name: 'Eric Mugisha (Demo)',
-      businessName: 'Eric Carpentry & Repair',
-      bio: 'Expert woodworker specializing in kitchen cabinets, table restoration, and door alignment.',
-      neighborhood: 'Remera',
-      ratingAverage: 485,
-      ratingCount: 14,
-      completedJobs: 16,
-      verificationLevel: VerificationLevel.PHONE_VERIFIED,
-    },
-    {
-      phone: '+250788000002',
-      name: 'Aline Umutoni (Demo)',
-      businessName: 'Aline Sparkle Cleaning',
-      bio: 'Reliable residential and move-out deep cleaning across Gasabo district.',
-      neighborhood: 'Kacyiru',
-      ratingAverage: 490,
-      ratingCount: 22,
-      completedJobs: 25,
-      verificationLevel: VerificationLevel.PHONE_VERIFIED,
-    },
-    {
-      phone: '+250788000003',
-      name: 'Patrick Niyonzima (Demo)',
-      businessName: 'Patrick Express Plumbing',
-      bio: 'Fast leak fixes, water heater installation, and sink unclogging in Kigali.',
-      neighborhood: 'Kimihurura',
-      ratingAverage: 475,
-      ratingCount: 9,
-      completedJobs: 11,
-      verificationLevel: VerificationLevel.PHONE_VERIFIED,
-    },
-  ];
+  // 3. Single Super Admin (D-012, D-020)
+  const adminEmail = (process.env.ADMIN_SEED_EMAIL || 'Iamshemaleandre@gmail.com').toLowerCase().trim();
+  const seedPassword = process.env.ADMIN_SEED_PASSWORD || 'KirakaAdmin2026!';
+  const passwordHash = await hash(seedPassword, {
+    algorithm: 2, // Argon2id
+    memoryCost: 19456,
+    timeCost: 2,
+  });
 
-  for (const p of demoProviders) {
-    let user = await prisma.user.findUnique({ where: { phone: p.phone } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          phone: p.phone,
-          phoneVerifiedAt: new Date(),
-          customerProfile: {
-            create: {
-              displayName: p.name,
-              neighborhood: p.neighborhood,
-            },
-          },
-          providerProfile: {
-            create: {
-              businessName: p.businessName,
-              bio: p.bio,
-              ratingAverage: p.ratingAverage,
-              ratingCount: p.ratingCount,
-              completedJobs: p.completedJobs,
-              verificationLevel: p.verificationLevel,
-            },
-          },
+  const superAdmin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      fullName: 'Shema Andre (Super Admin)',
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+      isActive: true,
+      emailVerifiedAt: new Date(),
+      passwordHash,
+    },
+    create: {
+      email: adminEmail,
+      fullName: 'Shema Andre (Super Admin)',
+      passwordHash,
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+      countryCode: 'RW',
+      locale: 'en',
+      isActive: true,
+      emailVerifiedAt: new Date(),
+      customerProfile: {
+        create: {
+          displayName: 'Shema Andre (Super Admin)',
+          neighborhood: 'Kacyiru',
         },
-      });
-    }
-  }
+      },
+    },
+    include: { customerProfile: true },
+  });
 
-  console.log('KIRAKA Kigali seed complete.');
+  console.log(`✓ Seeded single Super Admin: ${superAdmin.email} [Role: ${superAdmin.role}, Status: ${superAdmin.status}]`);
+  console.log('Zero mock data seeded. Marketplace starts in clean reference state.');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Seed error:', e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
-

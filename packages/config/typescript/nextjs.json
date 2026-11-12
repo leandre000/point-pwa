@@ -1,11 +1,12 @@
 {
   "extends": "./base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
     "jsx": "react-jsx",
     "noEmit": true,
     "incremental": true,
-    "plugins": [{ "name": "next" }]
+    "plugins": [{ "name": "next" }],
+    "exactOptionalPropertyTypes": false,
+    "noPropertyAccessFromIndexSignature": false
   }
 }
-
