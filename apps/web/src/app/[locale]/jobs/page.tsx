@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from '@/i18n/routing';
 import { JobCard, EmptyState, Button, Skeleton, ErrorState } from '@kiraka/ui';
-import { Briefcase, Plus, Search, Filter, CheckCircle2, ArrowRight, X } from 'lucide-react';
+import { Briefcase, Plus, Search, Filter, CheckCircle2, ArrowRight, X, MapPin } from 'lucide-react';
 import { apiClient } from '@/lib/api-client.js';
 import { useAuth } from '@/lib/auth-context.js';
 
@@ -311,8 +311,9 @@ export default function JobsPage() {
 
                 {/* Bottom row: Location + Price */}
                 <div className="flex items-center justify-between pt-1 border-t border-[#E8E7E3]/60 text-xs">
-                  <span className="text-[#5E6862] font-medium">
-                    📍 {job.areaName}
+                  <span className="text-[#5E6862] font-medium flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-[#1F513F] shrink-0" />
+                    <span>{job.areaName}</span>
                   </span>
                   <span className="text-sm font-extrabold text-[#1A201C] tabular-nums">
                     {job.budgetAmount ? `${job.budgetAmount.toLocaleString()} RWF` : 'Negotiable'}

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Card } from './Card.js';
 import { Badge } from './Badge.js';
-import { MapPin, Clock, MessageSquare, Sparkles } from 'lucide-react';
+import { MapPin, Clock, MessageSquare, Sparkles, Camera } from 'lucide-react';
 import { cn } from '../utils/cn.js';
 
 export interface JobCardProps {
@@ -110,8 +110,9 @@ export const JobCard: React.FC<JobCardProps> = ({
               : `${offerCount} offer${offerCount === 1 ? '' : 's'}`}
           </span>
           {photoCount > 0 && (
-            <span className="ml-2 text-[var(--color-text-tertiary)]">
-              📷 {photoCount} photo{photoCount === 1 ? '' : 's'}
+            <span className="ml-2 text-[var(--color-text-tertiary)] flex items-center gap-1">
+              <Camera className="h-3 w-3" />
+              <span>{photoCount} photo{photoCount === 1 ? '' : 's'}</span>
             </span>
           )}
         </div>

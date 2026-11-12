@@ -25,6 +25,7 @@ import {
   Ban,
   MessageSquare,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client.js';
 
@@ -173,8 +174,9 @@ export default function ProviderProfilePage() {
               <span className="block text-[18px] font-extrabold text-[var(--color-text)] tabular-nums">
                 {provider.ratingAverage ? provider.ratingAverage.toFixed(1) : 'New'}
               </span>
-              <span className="block text-[11px] text-[var(--color-text-tertiary)] font-medium">
-                ★ {provider.ratingCount} reviews
+              <span className="block text-[11px] text-[var(--color-text-tertiary)] font-medium flex items-center justify-center gap-0.5">
+                <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
+                <span>{provider.ratingCount} reviews</span>
               </span>
             </div>
 
@@ -249,8 +251,9 @@ export default function ProviderProfilePage() {
                   <span className="font-semibold text-[13px] text-[var(--color-text)]">
                     Kigali Customer
                   </span>
-                  <div className="flex items-center text-[var(--color-accent-text)] text-[12px] font-bold">
-                    ★ 5.0
+                  <div className="flex items-center gap-1 text-[var(--color-accent-text)] text-[12px] font-bold">
+                    <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                    <span>5.0</span>
                   </div>
                 </div>
                 <p className="text-[13px] text-[var(--color-text-secondary)]">

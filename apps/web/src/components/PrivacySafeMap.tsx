@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Card, Button, Badge } from '@kiraka/ui';
-import { ShieldCheck, MapPin, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
+import { ShieldCheck, MapPin, ExternalLink, RefreshCw, AlertCircle, X } from 'lucide-react';
 
 export interface MapItem {
   id: string;
@@ -154,6 +154,10 @@ export default function PrivacySafeMap({
             // Centroid label marker
             const el = document.createElement('div');
             el.className = 'kiraka-map-marker';
+            const iconSvg = item.type === 'job'
+              ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>'
+              : '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:inline-block"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+
             el.innerHTML = `
               <div style="
                 background: ${item.type === 'job' ? '#2563eb' : '#059669'};
@@ -166,10 +170,10 @@ export default function PrivacySafeMap({
                 cursor: pointer;
                 display: flex;
                 align-items: center;
-                gap: 4px;
+                gap: 5px;
                 white-space: nowrap;
               ">
-                <span>${item.type === 'job' ? '💼' : '⭐'}</span>
+                ${iconSvg}
                 <span>${item.areaName.split(',')[0]}</span>
               </div>
             `;
@@ -261,15 +265,17 @@ export default function PrivacySafeMap({
                 <h4 className="font-bold text-[14px] text-[var(--color-text)] mt-1 line-clamp-1">
                   {selectedItem.title}
                 </h4>
-                <p className="text-[12px] text-[var(--color-text-secondary)]">
-                  📍 {selectedItem.areaName} · {selectedItem.priceOrRating}
+                <p className="text-[12px] text-[var(--color-text-secondary)] flex items-center gap-1 mt-0.5">
+                  <MapPin className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0" />
+                  <span>{selectedItem.areaName} · {selectedItem.priceOrRating}</span>
                 </p>
               </div>
               <button
                 onClick={() => setSelectedItem(null)}
-                className="text-[var(--color-text-tertiary)] hover:text-[var(--color-text)] p-1 text-[14px]"
+                className="text-[var(--color-text-tertiary)] hover:text-[var(--color-text)] p-1 rounded-full hover:bg-[var(--color-surface-2)]"
+                aria-label="Close"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 

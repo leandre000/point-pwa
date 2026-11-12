@@ -50,7 +50,7 @@ export default function MapPage() {
             title: p.businessName,
             category: 'Service Specialist',
             areaName,
-            priceOrRating: p.ratingAverage ? `★ ${p.ratingAverage}` : 'Verified',
+            priceOrRating: p.ratingAverage ? `${p.ratingAverage.toFixed(1)} Rating` : 'Verified',
             lat: coords[0],
             lng: coords[1],
             deepLink: `/providers/${p.id}`,
@@ -142,8 +142,9 @@ export default function MapPage() {
                 <h4 className="font-semibold text-[13px] text-[var(--color-text)] line-clamp-1">
                   {item.title}
                 </h4>
-                <p className="text-[11px] text-[var(--color-text-tertiary)]">
-                  📍 {item.areaName}
+                <p className="text-[11px] text-[var(--color-text-tertiary)] flex items-center gap-1">
+                  <MapPin className="h-3 w-3 text-[var(--color-primary)] shrink-0" />
+                  <span>{item.areaName}</span>
                 </p>
               </Link>
             </Card>
