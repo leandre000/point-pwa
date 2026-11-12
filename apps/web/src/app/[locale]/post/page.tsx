@@ -1,373 +1,501 @@
 'use client';
 
 import * as React from 'react';
-import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
+import { Button, Banner } from '@kiraka/ui';
+import { ImageUploader } from '@/components/ImageUploader.js';
+import { UploadPurpose } from '@kiraka/contracts';
 import {
-  TopAppBar,
-  Button,
-  Input,
-  Textarea,
-  Card,
-  ImageUploader,
-  Banner,
-} from '@kiraka/ui';
-import { ShieldCheck, MapPin, Sparkles, Clock, CheckCircle2 } from 'lucide-react';
+  MapPin,
+  Clock,
+  Check,
+  Lock,
+  X,
+  Wrench,
+  Zap,
+  Sparkles,
+  Hammer,
+  HelpCircle,
+  Camera,
+  Info,
+} from 'lucide-react';
+import { apiClient } from '@/lib/api-client.js';
+import { useAuth } from '@/lib/auth-context.js';
+import { useAuthGate } from '@/components/AuthGate.js';
 
 const DRAFT_KEY = 'kiraka_post_job_draft';
 
+const KIGALI_AREAS = [
+  'Kacyiru, Gasabo',
+  'Remera, Gasabo',
+  'Kimihurura, Gasabo',
+  'Kibagabaga, Gasabo',
+  'Nyarutarama, Gasabo',
+  'Kimironko, Gasabo',
+  'Gisozi, Gasabo',
+  'Kicukiro, Kicukiro',
+  'Gikondo, Kicukiro',
+  'Kanombe, Kicukiro',
+  'Nyamirambo, Nyarugenge',
+  'Kagugu, Gasabo',
+];
+
+const CATEGORY_OPTIONS = [
+  { slug: 'plumbing', name: 'Plumbing', icon: Wrench, defaultPrice: '8,000' },
+  { slug: 'electrical', name: 'Electrical', icon: Zap, defaultPrice: '10,000' },
+  { slug: 'cleaning', name: 'Cleaning', icon: Sparkles, defaultPrice: '6,000' },
+  { slug: 'carpentry', name: 'Carpentry', icon: Hammer, defaultPrice: '12,000' },
+  { slug: 'maintenance', name: 'General Maintenance', icon: HelpCircle, defaultPrice: '7,000' },
+];
+
 export default function PostJobPage() {
-  const t = useTranslations('post');
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+  const { openAuthGate } = useAuthGate();
 
-  const [step, setStep] = React.useState<1 | 2 | 3 | 4>(1);
-  const [category, setCategory] = React.useState('cleaning');
+  // Mode switcher at top matching PointMe
+  const [activeMode, setActiveMode] = React.useState<'seeking' | 'offering'>('seeking');
+
+  // Form states (PointMe "What needs fixing?" layout)
   const [title, setTitle] = React.useState('');
+  const [categorySlug, setCategorySlug] = React.useState('plumbing');
   const [description, setDescription] = React.useState('');
+  const [areaName, setAreaName] = React.useState(user?.customerProfile?.neighborhood || 'Kacyiru, Gasabo');
+  const [addressNotes, setAddressNotes] = React.useState('');
+  const [suggestedPrice, setSuggestedPrice] = React.useState('8,000');
+  const [isNegotiable, setIsNegotiable] = React.useState(false);
+  const [timingType, setTimingType] = React.useState<'asap' | 'scheduled' | 'flexible'>('asap');
+  const [scheduledDate, setScheduledDate] = React.useState('');
   const [photos, setPhotos] = React.useState<string[]>([]);
-  const [area, setArea] = React.useState('Remera');
-  const [timing, setTiming] = React.useState('Flexible');
-  const [budgetAmount, setBudgetAmount] = React.useState('');
-  const [negotiable, setNegotiable] = React.useState(true);
-  const [draftSavedTime, setDraftSavedTime] = React.useState<string | null>(null);
-  const [publishing, setPublishing] = React.useState(false);
+  const [showAddressNotes, setShowAddressNotes] = React.useState(false);
+  const [showPhotoUploader, setShowPhotoUploader] = React.useState(false);
 
-  // Load saved draft on mount
+  // Status & categories
+  const [categories, setCategories] = React.useState<any[]>([]);
+  const [areas, setAreas] = React.useState<any[]>([]);
+  const [publishing, setPublishing] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Load API reference data
+  React.useEffect(() => {
+    async function loadMeta() {
+      try {
+        const [cats, ars] = await Promise.all([
+          apiClient<any[]>('/api/v1/categories').catch(() => []),
+          apiClient<any[]>('/api/v1/areas').catch(() => []),
+        ]);
+        if (cats && cats.length > 0) setCategories(cats);
+        if (ars && ars.length > 0) setAreas(ars);
+      } catch {}
+    }
+    loadMeta();
+  }, []);
+
+  // Restore draft from localStorage
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const draft = JSON.parse(saved);
-        if (draft.category) setCategory(draft.category);
         if (draft.title) setTitle(draft.title);
+        if (draft.categorySlug) setCategorySlug(draft.categorySlug);
         if (draft.description) setDescription(draft.description);
+        if (draft.areaName) setAreaName(draft.areaName);
+        if (draft.addressNotes) setAddressNotes(draft.addressNotes);
+        if (draft.suggestedPrice) setSuggestedPrice(draft.suggestedPrice);
+        if (draft.isNegotiable !== undefined) setIsNegotiable(draft.isNegotiable);
+        if (draft.timingType) setTimingType(draft.timingType);
+        if (draft.scheduledDate) setScheduledDate(draft.scheduledDate);
         if (draft.photos) setPhotos(draft.photos);
-        if (draft.area) setArea(draft.area);
-        if (draft.budgetAmount) setBudgetAmount(draft.budgetAmount);
-        setDraftSavedTime('Restored from draft');
       }
-    } catch (_) {}
+    } catch {}
   }, []);
 
   // Autosave draft on changes
   React.useEffect(() => {
     if (!title && !description) return;
-    const draft = { category, title, description, photos, area, budgetAmount };
+    const draft = {
+      title,
+      categorySlug,
+      description,
+      areaName,
+      addressNotes,
+      suggestedPrice,
+      isNegotiable,
+      timingType,
+      scheduledDate,
+      photos,
+    };
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-      setDraftSavedTime('Saved just now');
-    } catch (_) {}
-  }, [category, title, description, photos, area, budgetAmount]);
+    } catch {}
+  }, [title, categorySlug, description, areaName, addressNotes, suggestedPrice, isNegotiable, timingType, scheduledDate, photos]);
 
-  const steps = [
-    { num: 1, label: t('step1') },
-    { num: 2, label: t('step2') },
-    { num: 3, label: t('step3') },
-    { num: 4, label: t('step4') },
-  ];
+  const handleBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
 
-  const handlePublish = async () => {
+    // Relaxed validation: title must be at least 2 chars
+    if (title.trim().length < 2) {
+      setError('Please enter what needs fixing (e.g. Fix leaking kitchen pipe).');
+      return;
+    }
+
+    // Guest Gating with intent preservation
+    if (!isAuthenticated) {
+      openAuthGate('Sign in to broadcast your job request to nearby Kigali specialists.', '/post');
+      return;
+    }
+
     setPublishing(true);
     try {
-      // Clear draft on publish
-      localStorage.removeItem(DRAFT_KEY);
+      const chosenCat = categories.find((c) => c.slug === categorySlug) || categories[0];
+      const areaPrefix = areaName.split(',')[0]?.trim() || 'Kacyiru';
+      const chosenArea = areas.find((a) => a.name.toLowerCase().includes(areaPrefix.toLowerCase())) || areas[0];
 
-      // Call API or demo fallback
-      await fetch('/api/v1/jobs', {
+      const priceNum = isNegotiable
+        ? undefined
+        : parseInt(suggestedPrice.replace(/[^0-9]/g, ''), 10) || undefined;
+
+      const timingLabel =
+        timingType === 'asap'
+          ? 'Needed now · ASAP'
+          : timingType === 'scheduled' && scheduledDate
+          ? `Scheduled for ${scheduledDate}`
+          : 'Flexible timing';
+
+      const createdJob = await apiClient<any>('/api/v1/jobs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          categoryId: 'cat-1',
-          areaId: 'area-1',
-          title,
-          description,
-          budgetAmount: budgetAmount ? parseInt(budgetAmount.replace(/\D/g, '')) : undefined,
-          budgetNegotiable: negotiable,
-          timingPreference: timing,
+          categoryId: chosenCat?.id || '00000000-0000-0000-0000-000000000001',
+          areaId: chosenArea?.id || '00000000-0000-0000-0000-000000000001',
+          title: title.trim(),
+          description: description.trim() || title.trim(),
+          addressNotes: addressNotes.trim() || undefined,
+          budgetAmount: priceNum,
+          budgetCurrency: 'RWF',
+          budgetNegotiable: isNegotiable,
+          timingPreference: timingLabel,
+          windowType: timingType,
           photos,
         }),
-      }).catch(() => null);
+      });
 
-      alert('Job request published! Providers in your area have been notified.');
-      router.push('/jobs');
+      // Clear draft on success
+      localStorage.removeItem(DRAFT_KEY);
+
+      // Deep link to created job offers page or job details
+      router.push(`/jobs/${createdJob.id}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to broadcast job. Please try again.');
     } finally {
       setPublishing(false);
     }
   };
 
-  return (
-    <div className="flex flex-col min-h-full">
-      <TopAppBar
-        title={t('title')}
-        subtitle={draftSavedTime || undefined}
-        onBack={step > 1 ? () => setStep((s) => (s - 1) as any) : () => router.push('/')}
-      />
+  const selectedCategory = CATEGORY_OPTIONS.find((c) => c.slug === categorySlug) || CATEGORY_OPTIONS[0]!;
+  const IconComponent = selectedCategory.icon;
 
-      {/* Stepper indicator */}
-      <div className="bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 py-3">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          {steps.map((s, idx) => (
-            <React.Fragment key={s.num}>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`h-7 w-7 rounded-full flex items-center justify-center text-[12px] font-bold ${
-                    step >= s.num
-                      ? 'bg-[var(--color-primary)] text-white'
-                      : 'bg-[var(--color-surface-2)] text-[var(--color-text-tertiary)]'
-                  }`}
-                >
-                  {s.num}
-                </div>
-                <span className="text-[12px] font-medium hidden sm:inline text-[var(--color-text)]">
-                  {s.label}
-                </span>
-              </div>
-              {idx < steps.length - 1 && (
-                <div
-                  className={`flex-1 h-0.5 mx-2 ${
-                    step > s.num ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'
-                  }`}
-                />
-              )}
-            </React.Fragment>
-          ))}
+  return (
+    <div className="min-h-screen bg-[#F7F7F5] flex flex-col items-center pb-24 md:pb-12 w-full">
+      {/* Top Segment Switcher matching PointMe reference */}
+      <div className="w-full max-w-lg px-3 sm:px-4 pt-3 sm:pt-4 pb-2 sticky top-0 z-20 bg-[#F7F7F5]/90 backdrop-blur-md">
+        <div className="flex rounded-full bg-[#E8E7E3] p-1 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setActiveMode('seeking')}
+            className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all min-h-[38px] ${
+              activeMode === 'seeking'
+                ? 'bg-[#1F513F] text-white shadow-sm'
+                : 'text-[#5E6862] hover:text-[#1A201C]'
+            }`}
+          >
+            Seeking Help
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveMode('offering');
+              router.push('/jobs');
+            }}
+            className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all min-h-[38px] ${
+              activeMode === 'offering'
+                ? 'bg-[#1F513F] text-white shadow-sm'
+                : 'text-[#5E6862] hover:text-[#1A201C]'
+            }`}
+          >
+            Offering Help
+          </button>
         </div>
       </div>
 
-      {/* Step Content */}
-      <div className="flex-1 p-4 max-w-md mx-auto w-full flex flex-col justify-between">
-        <div className="space-y-5 py-4">
-          {step === 1 && (
-            <div className="space-y-3">
-              <h2 className="text-[18px] font-bold text-[var(--color-text)]">
-                {t('categoryLabel')}
-              </h2>
-              <div className="grid grid-cols-1 gap-2.5">
+      {/* Main Broadcast Card (PointMe "What needs fixing?" Sheet) */}
+      <div className="w-full max-w-lg px-3 sm:px-4 py-2 sm:py-3">
+        <div className="rounded-3xl bg-white border border-[#E8E7E3] shadow-sm p-4 sm:p-6 space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between pb-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#1A201C]">
+              What needs fixing?
+            </h1>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="p-1.5 rounded-full text-[#5E6862] hover:bg-[#F2F1ED] transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Feedback banner */}
+          {error && (
+            <Banner
+              variant="warning"
+              message={error}
+              onDismiss={() => setError(null)}
+            />
+          )}
+
+          <form onSubmit={handleBroadcast} className="space-y-4">
+            {/* Task Title */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#1A201C]">
+                Task title
+              </label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Fix leaking kitchen pipe"
+                className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-[#E8E7E3] bg-white text-base sm:text-sm text-[#1A201C] placeholder:text-[#8E9892] focus:outline-none focus:ring-2 focus:ring-[#1F513F]"
+                autoFocus
+              />
+            </div>
+
+            {/* Category Dropdown */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#1A201C]">
+                Category
+              </label>
+              <div className="relative">
+                <div className="absolute left-3.5 top-3 sm:top-3.5 text-[#1F513F]">
+                  <IconComponent className="h-5 w-5" />
+                </div>
+                <select
+                  value={categorySlug}
+                  onChange={(e) => {
+                    const slug = e.target.value;
+                    setCategorySlug(slug);
+                    const opt = CATEGORY_OPTIONS.find((c) => c.slug === slug);
+                    if (opt && !isNegotiable) setSuggestedPrice(opt.defaultPrice);
+                  }}
+                  className="w-full h-11 sm:h-12 pl-11 pr-8 rounded-xl border border-[#E8E7E3] bg-white text-base sm:text-sm font-medium text-[#1A201C] focus:outline-none focus:ring-2 focus:ring-[#1F513F] appearance-none cursor-pointer truncate"
+                >
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <option key={cat.slug} value={cat.slug}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute right-3.5 top-3.5 sm:top-4 text-[#8E9892]">
+                  <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* A little more detail (Textarea with relaxed validation) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-[#1A201C]">
+                  A little more detail
+                </label>
+                <span className="text-[11px] text-[#8E9892]">Optional</span>
+              </div>
+              <textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Pipe under the kitchen sink is dripping. Please bring tools to check the joint."
+                className="w-full p-3 rounded-xl border border-[#E8E7E3] bg-white text-base sm:text-sm text-[#1A201C] placeholder:text-[#8E9892] focus:outline-none focus:ring-2 focus:ring-[#1F513F] resize-none"
+              />
+            </div>
+
+            {/* Location row */}
+            <div className="p-3 rounded-xl bg-[#F8F8F6] border border-[#E8E7E3] space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  <MapPin className="h-4 w-4 text-[#1F513F] shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <select
+                      value={areaName}
+                      onChange={(e) => setAreaName(e.target.value)}
+                      className="bg-transparent text-xs font-semibold text-[#1A201C] focus:outline-none cursor-pointer w-full truncate"
+                    >
+                      {KIGALI_AREAS.map((a) => (
+                        <option key={a} value={a}>
+                          {a}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-[#5E6862] mt-0.5 truncate">
+                      Inside the Kigali launch area · within 5 km
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddressNotes(!showAddressNotes)}
+                  className="text-xs font-semibold text-[#1F513F] hover:underline shrink-0"
+                >
+                  {showAddressNotes ? 'Hide notes' : 'Add note'}
+                </button>
+              </div>
+
+              {/* Private Address Notes */}
+              {showAddressNotes && (
+                <div className="pt-2 border-t border-[#E8E7E3]/60 space-y-1">
+                  <div className="flex items-center gap-1 text-[11px] text-[#5E6862]">
+                    <Lock className="h-3 w-3 text-[#1F513F]" />
+                    <span>Private notes (shared only after agreement):</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={addressNotes}
+                    onChange={(e) => setAddressNotes(e.target.value)}
+                    placeholder="e.g. Near BK Arena, yellow gate"
+                    className="w-full h-9 px-2.5 rounded-lg border border-[#E8E7E3] bg-white text-base sm:text-xs text-[#1A201C] focus:outline-none focus:ring-2 focus:ring-[#1F513F]"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Suggested Labor Price */}
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-1">
+                <label className="block text-xs font-semibold text-[#1A201C]">
+                  Suggested labor price · RWF
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsNegotiable(!isNegotiable)}
+                  className={`text-xs font-medium transition-colors ${
+                    isNegotiable ? 'text-[#1F513F] font-bold' : 'text-[#5E6862]'
+                  }`}
+                >
+                  {isNegotiable ? '✓ Negotiable price' : 'Mark as negotiable'}
+                </button>
+              </div>
+              <input
+                type="text"
+                disabled={isNegotiable}
+                value={isNegotiable ? 'Negotiable with specialists' : suggestedPrice}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setSuggestedPrice(val ? Number(val).toLocaleString() : '');
+                }}
+                placeholder="8,000"
+                className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border border-[#E8E7E3] text-base sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1F513F] ${
+                  isNegotiable
+                    ? 'bg-[#F2F1ED] text-[#5E6862]'
+                    : 'bg-white text-[#1A201C]'
+                }`}
+              />
+            </div>
+
+            {/* Timing selection */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#1A201C]">
+                When do you need help?
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                 {[
-                  { id: 'cleaning', name: 'Cleaning & Housekeeping' },
-                  { id: 'plumbing', name: 'Plumbing & Pipe Repair' },
-                  { id: 'electrical', name: 'Electrical & Appliances' },
-                  { id: 'carpentry', name: 'Carpentry & Furniture Repair' },
-                  { id: 'maintenance', name: 'General Home Maintenance' },
-                ].map((c) => (
+                  { id: 'asap', label: 'Needed now' },
+                  { id: 'scheduled', label: 'Pick date' },
+                  { id: 'flexible', label: 'Flexible' },
+                ].map((t) => (
                   <button
-                    key={c.id}
-                    onClick={() => setCategory(c.id)}
-                    className={`p-4 rounded-[var(--radius-card)] border text-left font-medium transition-all min-h-[48px] ${
-                      category === c.id
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary-tint)] text-[var(--color-primary)] font-semibold'
-                        : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]'
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTimingType(t.id as any)}
+                    className={`py-2 sm:py-2.5 px-1 sm:px-2 rounded-xl text-[11px] sm:text-xs font-semibold transition-all border text-center truncate ${
+                      timingType === t.id
+                        ? 'bg-[#E8F1EC] text-[#1F513F] border-[#1F513F]'
+                        : 'bg-white text-[#5E6862] border-[#E8E7E3] hover:bg-[#F8F8F6]'
                     }`}
                   >
-                    {c.name}
+                    {t.label}
                   </button>
                 ))}
               </div>
-            </div>
-          )}
 
-          {step === 2 && (
-            <div className="space-y-4">
-              <Input
-                label={t('titleLabel')}
-                placeholder={t('titlePlaceholder')}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <Textarea
-                label={t('descLabel')}
-                placeholder={t('descPlaceholder')}
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-
-              {/* Client-side photo compression uploader */}
-              <ImageUploader
-                images={photos}
-                onChange={setPhotos}
-                maxImages={4}
-              />
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4">
-              <div>
-                <label className="text-[14px] font-medium text-[var(--color-text)] mb-1.5 block">
-                  {t('areaLabel')}
-                </label>
-                <select
-                  value={area}
-                  onChange={(e) => setArea(e.target.value)}
-                  className="w-full h-12 px-3.5 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[16px] text-[var(--color-text)]"
-                >
-                  <option value="Remera">Remera, Gasabo</option>
-                  <option value="Kacyiru">Kacyiru, Gasabo</option>
-                  <option value="Kimihurura">Kimihurura, Gasabo</option>
-                  <option value="Nyamirambo">Nyamirambo, Nyarugenge</option>
-                  <option value="Kiyovu">Kiyovu, Nyarugenge</option>
-                  <option value="Gikondo">Gikondo, Kicukiro</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[14px] font-medium text-[var(--color-text)] mb-1.5 block">
-                  When do you need this done?
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['Today', 'This Week', 'Flexible'].map((time) => (
-                    <button
-                      key={time}
-                      type="button"
-                      onClick={() => setTiming(time)}
-                      className={`py-2 px-3 text-[13px] rounded-[var(--radius-control)] border font-medium ${
-                        timing === time
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary-tint)] text-[var(--color-primary)] font-semibold'
-                          : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]'
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Input
-                  label={t('budgetLabel')}
-                  placeholder="e.g. 15000"
-                  value={budgetAmount}
-                  onChange={(e) => setBudgetAmount(e.target.value)}
-                  helperText="Amounts are in Rwandan Francs (RWF)"
-                />
-
-                <label className="flex items-center gap-2 text-[14px] text-[var(--color-text)] cursor-pointer select-none pt-1">
+              {timingType === 'scheduled' && (
+                <div className="pt-2">
                   <input
-                    type="checkbox"
-                    checked={negotiable}
-                    onChange={(e) => setNegotiable(e.target.checked)}
-                    className="h-4 w-4 rounded accent-[var(--color-primary)]"
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border border-[#E8E7E3] bg-white text-base sm:text-xs text-[#1A201C]"
                   />
-                  <span>Open to provider counteroffers (Negotiable)</span>
-                </label>
-              </div>
-
-              <div className="rounded-[var(--radius-card)] bg-[var(--color-surface-2)] p-3 text-[12px] text-[var(--color-text-secondary)] flex items-start gap-2">
-                <ShieldCheck className="h-4 w-4 text-[var(--color-primary)] shrink-0 mt-0.5" />
-                <span>
-                  Your exact home or office address is private. It is only shared with the provider you choose to accept.
-                </span>
-              </div>
+                </div>
+              )}
             </div>
-          )}
 
-          {step === 4 && (
-            <div className="space-y-4">
-              <h2 className="text-[18px] font-bold text-[var(--color-text)]">
-                Review your request
-              </h2>
-              <Card className="space-y-3">
-                <div>
-                  <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase font-semibold">
-                    Category
-                  </span>
-                  <p className="font-semibold text-[15px] capitalize text-[var(--color-text)]">
-                    {category}
-                  </p>
-                </div>
-
-                <div>
-                  <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase font-semibold">
-                    Job Title
-                  </span>
-                  <p className="font-semibold text-[15px] text-[var(--color-text)]">
-                    {title || 'Untitled Request'}
-                  </p>
-                </div>
-
-                {description && (
-                  <div>
-                    <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase font-semibold">
-                      Details
-                    </span>
-                    <p className="text-[13px] text-[var(--color-text-secondary)]">
-                      {description}
-                    </p>
+            {/* Optional Photo Attachment toggle */}
+            <div className="pt-1">
+              {!showPhotoUploader ? (
+                <button
+                  type="button"
+                  onClick={() => setShowPhotoUploader(true)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-[#1F513F] hover:underline"
+                >
+                  <Camera className="h-4 w-4" />
+                  <span>Attach photos (optional, up to 5)</span>
+                </button>
+              ) : (
+                <div className="space-y-2 p-3 bg-[#F8F8F6] rounded-xl border border-[#E8E7E3]">
+                  <div className="flex justify-between items-center text-xs font-semibold text-[#1A201C]">
+                    <span>Attach Photos</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPhotoUploader(false)}
+                      className="text-[#8E9892] hover:text-[#1A201C]"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--color-border)]">
-                  <div>
-                    <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase font-semibold">
-                      Neighborhood
-                    </span>
-                    <p className="font-medium text-[14px] text-[var(--color-text)]">
-                      {area}, Kigali
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase font-semibold">
-                      Timing
-                    </span>
-                    <p className="font-medium text-[14px] text-[var(--color-text)]">
-                      {timing}
-                    </p>
-                  </div>
+                  <ImageUploader
+                    purpose={UploadPurpose.JOB_PHOTO}
+                    existingUrls={photos}
+                    onChange={setPhotos}
+                    maxFiles={5}
+                  />
                 </div>
-
-                <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-between">
-                  <span className="text-[13px] text-[var(--color-text-secondary)] font-medium">
-                    Estimated Budget:
-                  </span>
-                  <span className="text-[18px] font-bold text-[var(--color-accent-text)] tabular-nums">
-                    {budgetAmount ? `${budgetAmount} RWF` : 'Negotiable'}
-                  </span>
-                </div>
-
-                {photos.length > 0 && (
-                  <div className="pt-2 border-t border-[var(--color-border)]">
-                    <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase font-semibold block mb-1.5">
-                      Attached Photos ({photos.length})
-                    </span>
-                    <div className="flex gap-2">
-                      {photos.map((src, idx) => (
-                        <img
-                          key={idx}
-                          src={src}
-                          alt="Thumbnail"
-                          className="h-12 w-12 rounded object-cover border border-[var(--color-border)]"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </Card>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Action Button */}
-        <div className="pt-4 border-t border-[var(--color-border)]">
-          {step < 4 ? (
+            {/* Green info note matching PointMe reference */}
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-[#E8F1EC] border border-[#1F513F]/15 flex items-start gap-2.5 text-xs text-[#1F513F]">
+              <Info className="h-4 w-4 shrink-0 mt-0.5 text-[#1F513F]" />
+              <p className="leading-relaxed text-[11px] sm:text-xs">
+                <span className="font-semibold">KIRAKA is 100% free during pilot.</span> This request has zero platform fee; you pay the worker's agreed labor price directly.
+              </p>
+            </div>
+
+            {/* Big Primary Green Broadcast Button */}
             <Button
+              type="submit"
               variant="primary"
-              fullWidth
-              disabled={step === 2 && (!title || !description)}
-              onClick={() => setStep((s) => (s + 1) as any)}
+              size="lg"
+              disabled={publishing}
+              className="w-full min-h-[48px] h-auto py-3 px-4 rounded-full bg-[#1F513F] hover:bg-[#163C2E] text-white font-bold text-xs sm:text-sm md:text-base leading-snug flex items-center justify-center gap-2 shadow-sm text-center"
             >
-              Continue
+              {publishing ? 'Broadcasting...' : `Broadcast to nearby ${selectedCategory.name.toLowerCase()} specialists`}
             </Button>
-          ) : (
-            <Button
-              variant="primary"
-              fullWidth
-              loading={publishing}
-              onClick={handlePublish}
-            >
-              {t('publishAction')}
-            </Button>
-          )}
+          </form>
         </div>
       </div>
     </div>

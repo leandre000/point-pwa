@@ -34,6 +34,10 @@ const config: Config = {
           text: 'var(--color-accent-text)',
           tint: 'var(--color-accent-tint)',
         },
+        clay: {
+          DEFAULT: 'var(--color-clay)',
+          tint: 'var(--color-clay-tint)',
+        },
         info: {
           DEFAULT: 'var(--color-info)',
           tint: 'var(--color-info-tint)',
@@ -62,6 +66,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-family)'],
+        display: ['var(--font-display)'],
       },
     },
   },

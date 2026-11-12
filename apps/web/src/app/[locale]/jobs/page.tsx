@@ -1,140 +1,325 @@
 'use client';
 
 import * as React from 'react';
-import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { TopAppBar, JobCard, EmptyState, Button } from '@kiraka/ui';
-import { Briefcase, Plus } from 'lucide-react';
+import { JobCard, EmptyState, Button, Skeleton, ErrorState } from '@kiraka/ui';
+import { Briefcase, Plus, Search, Filter, CheckCircle2, ArrowRight } from 'lucide-react';
+import { apiClient } from '@/lib/api-client.js';
+import { useAuth } from '@/lib/auth-context.js';
+
+interface JobData {
+  id: string;
+  title: string;
+  description: string;
+  categoryName: string;
+  areaName: string;
+  budgetAmount: number | null;
+  budgetNegotiable: boolean;
+  timingPreference: string;
+  offerCount: number;
+  timeAgo: string;
+  status: string;
+  photoCount: number;
+  isOwner?: boolean;
+  hasMyOffer?: boolean;
+  myOfferPrice?: number;
+  myOfferCurrency?: string;
+  viewerRole?: string;
+}
 
 export default function JobsPage() {
-  const t = useTranslations('jobs');
   const router = useRouter();
-  const [filter, setFilter] = React.useState<'all' | 'hiring' | 'working'>('all');
+  const { user } = useAuth();
 
-  const jobs = [
-    {
-      id: 'job-1',
-      type: 'hiring',
-      title: 'Fix kitchen sink pipe leak',
-      categoryName: 'Plumbing',
-      areaName: 'Remera, Gasabo',
-      budgetAmount: 12000,
-      budgetNegotiable: true,
-      timingPreference: 'Today morning',
-      offerCount: 3,
-      timeAgo: '25m ago',
-      status: 'open',
-      photoCount: 2,
-    },
-    {
-      id: 'job-2',
-      type: 'working',
-      title: 'Bathroom instantaneous water heater wiring',
-      categoryName: 'Electrical',
-      areaName: 'Kimihurura, Gasabo',
-      budgetAmount: 25000,
-      budgetNegotiable: false,
-      timingPreference: 'This Week',
-      offerCount: 1,
-      timeAgo: '1h ago',
-      status: 'open',
-      photoCount: 1,
-    },
-    {
-      id: 'job-3',
-      type: 'hiring',
-      title: 'Deep cleaning 2-bedroom home before move-in',
-      categoryName: 'Cleaning',
-      areaName: 'Kacyiru, Gasabo',
-      budgetAmount: 18000,
-      budgetNegotiable: true,
-      timingPreference: 'Tomorrow',
-      offerCount: 4,
-      timeAgo: '3h ago',
-      status: 'open',
-      photoCount: 0,
-    },
-  ];
+  const [activeTab, setActiveTab] = React.useState<'open' | 'my_offers' | 'my_requests'>('open');
+  const [search, setSearch] = React.useState('');
+  const [jobs, setJobs] = React.useState<JobData[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const filteredJobs = jobs.filter((j) => {
-    if (filter === 'all') return true;
-    return j.type === filter;
+  const fetchJobs = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const endpoint = activeTab === 'my_requests' && user
+        ? '/api/v1/jobs/my'
+        : '/api/v1/jobs';
+
+      const res = await apiClient<{ items?: any[]; jobs?: any[] } | any[]>(endpoint).catch(() => ({ items: [] }));
+      const rawList = Array.isArray(res) ? res : (res as any).items || (res as any).jobs || [];
+
+      const formatted: JobData[] = rawList.map((j: any) => {
+        const hasOffer = Boolean(j.userOffer || j.viewerRole === 'OFFERED_PROVIDER');
+        return {
+          id: j.id,
+          title: j.title,
+          description: j.description || '',
+          categoryName: j.category?.name || j.category?.nameEn || 'General',
+          areaName: j.area?.name || j.serviceArea?.name || 'Kigali',
+          budgetAmount: j.budget?.amount ?? j.budgetAmount ?? null,
+          budgetNegotiable: j.budget?.negotiable ?? j.budgetNegotiable ?? true,
+          timingPreference: j.timingPreference || 'Flexible',
+          offerCount: j.offerCount || j._count?.offers || 0,
+          timeAgo: 'Active',
+          status: j.status || 'OPEN',
+          photoCount: j.photos?.length || j.attachments?.length || 0,
+          isOwner: user?.id === j.customerId,
+          hasMyOffer: hasOffer,
+          myOfferPrice: j.userOffer?.priceAmount,
+          myOfferCurrency: j.userOffer?.priceCurrency || 'RWF',
+          viewerRole: j.viewerRole,
+        };
+      });
+
+      setJobs(formatted);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load broadcasts. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab, user]);
+
+  React.useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  const filteredJobs = jobs.filter((job) => {
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      const matchTitle = job.title.toLowerCase().includes(s);
+      const matchCat = job.categoryName.toLowerCase().includes(s);
+      const matchArea = job.areaName.toLowerCase().includes(s);
+      if (!matchTitle && !matchCat && !matchArea) return false;
+    }
+
+    if (activeTab === 'open') {
+      // In "Open Bids", hide jobs where the provider already sent an offer or is owner
+      if (job.isOwner) return false;
+      if (job.hasMyOffer) return false;
+      return job.status === 'OPEN';
+    }
+
+    if (activeTab === 'my_offers') {
+      return job.hasMyOffer;
+    }
+
+    if (activeTab === 'my_requests') {
+      return job.isOwner;
+    }
+
+    return true;
   });
 
   return (
-    <div className="flex flex-col min-h-full">
-      <TopAppBar
-        title={t('title')}
-        subtitle={t('subtitle')}
-        actions={
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => router.push('/post')}
+    <div className="flex flex-col min-h-screen bg-[#F7F7F5] pb-24 md:pb-12">
+      {/* Top Segment Switcher matching PointMe reference */}
+      <div className="w-full max-w-md mx-auto px-4 pt-4 pb-2 sticky top-0 z-20 bg-[#F7F7F5]/90 backdrop-blur-md">
+        <div className="flex rounded-full bg-[#E8E7E3] p-1 shadow-inner">
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            className="flex-1 py-2 text-xs sm:text-sm font-semibold rounded-full text-[#5E6862] hover:text-[#1A201C] transition-all"
           >
-            <Plus className="h-4 w-4 mr-1" /> Post
-          </Button>
-        }
-      />
-
-      <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] sticky top-14 z-20">
-        <div className="flex gap-2 max-w-xl mx-auto">
-          {(['all', 'hiring', 'working'] as const).map((key) => {
-            const label =
-              key === 'all'
-                ? t('filterAll')
-                : key === 'hiring'
-                  ? t('filterHiring')
-                  : t('filterWorking');
-            const active = filter === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setFilter(key)}
-                className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition-colors min-h-[36px] ${
-                  active
-                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] font-semibold'
-                    : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-border-strong)]'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
+            Seeking Help
+          </button>
+          <button
+            type="button"
+            className="flex-1 py-2 text-xs sm:text-sm font-semibold rounded-full bg-[#1F513F] text-white shadow-sm transition-all"
+          >
+            Offering Help
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
-        {filteredJobs.length > 0 ? (
+      <div className="p-4 max-w-xl mx-auto w-full space-y-4">
+        {/* Title header matching PointMe "Local broadcasts" */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#1A201C]">
+              Local broadcasts
+            </h1>
+            <p className="text-xs text-[#5E6862] mt-0.5">
+              {user?.customerProfile?.neighborhood || 'Kigali'} · {filteredJobs.length} active requests nearby
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => router.push('/post')}
+            className="rounded-full bg-[#1F513F] text-white text-xs font-bold"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Post
+          </Button>
+        </div>
+
+        {/* Search bar */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-[#8E9892] pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter by title, category, or neighborhood..."
+            className="w-full h-11 pl-10 pr-3 rounded-xl bg-white border border-[#E8E7E3] text-sm text-[#1A201C] placeholder:text-[#8E9892] focus:outline-none focus:ring-2 focus:ring-[#1F513F]"
+          />
+        </div>
+
+        {/* Filter Tabs (PointMe local bidding feed layout) */}
+        <div className="flex gap-2 pb-1 overflow-x-auto">
+          {[
+            { id: 'open', label: 'Open for Bids' },
+            { id: 'my_offers', label: 'Offers Sent' },
+            { id: 'my_requests', label: 'My Requests' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 ${
+                activeTab === tab.id
+                  ? 'bg-[#1F513F] text-white shadow-sm'
+                  : 'bg-white border border-[#E8E7E3] text-[#5E6862] hover:text-[#1A201C]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {error && (
+          <ErrorState
+            title="Connection Error"
+            description={error}
+            onRetry={fetchJobs}
+          />
+        )}
+
+        {/* Broadcasts Feed matching PointMe "Local bidding feed · Eric's view" */}
+        {loading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-32 rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
+          </div>
+        ) : filteredJobs.length > 0 ? (
           <div className="space-y-3">
             {filteredJobs.map((job) => (
-              <JobCard
+              <div
                 key={job.id}
-                id={job.id}
-                title={job.title}
-                categoryName={job.categoryName}
-                areaName={job.areaName}
-                budgetAmount={job.budgetAmount}
-                budgetNegotiable={job.budgetNegotiable}
-                timingPreference={job.timingPreference}
-                offerCount={job.offerCount}
-                timeAgo={job.timeAgo}
-                status={job.status}
-                photoCount={job.photoCount}
-                onClick={() => router.push(`/post`)}
-              />
+                className="p-4 rounded-2xl bg-white border border-[#E8E7E3] hover:border-[#1F513F]/40 transition-all shadow-sm space-y-3"
+              >
+                {/* Top row: Category pill + Timing */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="px-2.5 py-1 rounded-full bg-[#E8F1EC] text-[#1F513F] font-bold">
+                    {job.categoryName}
+                  </span>
+                  <span className="text-[#8E9892] font-medium">
+                    {job.timingPreference || 'Needed now'}
+                  </span>
+                </div>
+
+                {/* Job Title & Description */}
+                <div>
+                  <h2
+                    onClick={() => router.push(`/jobs/${job.id}`)}
+                    className="text-base font-bold text-[#1A201C] hover:text-[#1F513F] transition-colors cursor-pointer"
+                  >
+                    {job.title}
+                  </h2>
+                  <p className="text-xs text-[#5E6862] line-clamp-2 mt-1 leading-relaxed">
+                    {job.description}
+                  </p>
+                </div>
+
+                {/* Bottom row: Location + Price */}
+                <div className="flex items-center justify-between pt-1 border-t border-[#E8E7E3]/60 text-xs">
+                  <span className="text-[#5E6862] font-medium">
+                    📍 {job.areaName}
+                  </span>
+                  <span className="text-sm font-extrabold text-[#1A201C] tabular-nums">
+                    {job.budgetAmount ? `${job.budgetAmount.toLocaleString()} RWF` : 'Negotiable'}
+                  </span>
+                </div>
+
+                {/* Actions Area */}
+                {job.hasMyOffer ? (
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <span className="flex items-center gap-1.5 text-[#1F513F] font-bold">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Offer Sent · {job.myOfferPrice ? `${job.myOfferPrice.toLocaleString()} ${job.myOfferCurrency}` : 'Submitted'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/jobs/${job.id}`)}
+                      className="text-xs font-semibold text-[#1F513F] hover:underline"
+                    >
+                      View Details →
+                    </button>
+                  </div>
+                ) : !job.isOwner ? (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/jobs/${job.id}`)}
+                      className="py-2.5 px-3 rounded-xl bg-[#1F513F] hover:bg-[#163C2E] text-white text-xs font-bold transition-all text-center"
+                    >
+                      {job.budgetAmount ? `Accept ${job.budgetAmount.toLocaleString()} RWF` : 'Make Offer'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/jobs/${job.id}`)}
+                      className="py-2.5 px-3 rounded-xl border border-[#E8E7E3] bg-white hover:bg-[#F8F8F6] text-[#1A201C] text-xs font-semibold transition-all text-center"
+                    >
+                      Counteroffer
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <span className="text-[#5E6862]">
+                      Your request · <strong>{job.offerCount}</strong> offers received
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/jobs/${job.id}/offers`)}
+                      className="font-bold text-[#1F513F] hover:underline"
+                    >
+                      Compare Offers →
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         ) : (
-          <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="flex items-center justify-center min-h-[35vh]">
             <EmptyState
               icon={Briefcase}
-              title={t('emptyTitle')}
-              description={t('emptyDesc')}
-              action={{
-                label: t('postAction'),
-                onClick: () => router.push('/post'),
-              }}
+              title={
+                activeTab === 'open'
+                  ? 'No unoffered broadcasts nearby'
+                  : activeTab === 'my_offers'
+                  ? 'No submitted offers yet'
+                  : 'No requests posted yet'
+              }
+              description={
+                activeTab === 'open'
+                  ? 'You have responded to all available requests in your area, or no new broadcasts are active right now.'
+                  : activeTab === 'my_offers'
+                  ? 'Explore open broadcasts and submit competitive offers to neighbors.'
+                  : 'Broadcast a job request to connect with verified specialists.'
+              }
+              action={
+                activeTab === 'open'
+                  ? {
+                      label: 'Switch to My Offers',
+                      onClick: () => setActiveTab('my_offers'),
+                    }
+                  : {
+                      label: 'Post a Task',
+                      onClick: () => router.push('/post'),
+                    }
+              }
             />
           </div>
         )}

@@ -2,243 +2,495 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/routing';
+import { useRouter } from '@/i18n/routing';
 import {
-  Sparkles,
+  HeroBanner,
+  CategoryTile,
+  JobCard,
+  ProviderCard,
+  Button,
+  Card,
+  Skeleton,
+  EmptyState,
+  ErrorState,
+} from '@kiraka/ui';
+import {
   Search,
-  Wrench,
-  Zap,
-  Hammer,
-  Shield,
-  Clock,
   ArrowRight,
-  MapPin,
+  Briefcase,
+  Sparkles,
+  ShieldCheck,
+  CheckCircle2,
+  PlusCircle,
+  Wrench,
 } from 'lucide-react';
-import { Button, Card, Badge } from '@kiraka/ui';
+import { apiClient } from '@/lib/api-client.js';
+import { useAuth } from '@/lib/auth-context.js';
+
+interface CategoryItem {
+  id: string;
+  slug: string;
+  name: string;
+  nameEn: string;
+  jobCount?: number;
+}
+
+interface JobItem {
+  id: string;
+  title: string;
+  description: string;
+  categoryName: string;
+  areaName: string;
+  budgetAmount: number | null;
+  budgetNegotiable: boolean;
+  timingPreference: string;
+  offerCount: number;
+  timeAgo: string;
+  status: string;
+  photoCount: number;
+}
+
+interface ProviderItem {
+  id: string;
+  businessName: string;
+  bio?: string;
+  verificationLevel: string;
+  completedJobs: number;
+  ratingAverage: number | null;
+  ratingCount: number;
+  area: string;
+}
+
+const DEFAULT_CATEGORY_PHOTOS: Record<string, string> = {
+  cleaning: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=640&q=80',
+  plumbing: 'https://images.unsplash.com/photo-1505798577917-a65157d3320a?auto=format&fit=crop&w=640&q=80',
+  electrical: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=640&q=80',
+  carpentry: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=640&q=80',
+  maintenance: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=640&q=80',
+};
+
+const INITIAL_CATEGORIES: CategoryItem[] = [
+  { id: 'cat-cleaning-01', slug: 'cleaning', name: 'Cleaning & Housekeeping', nameEn: 'Cleaning & Housekeeping' },
+  { id: 'cat-plumbing-02', slug: 'plumbing', name: 'Plumbing & Pipe Repair', nameEn: 'Plumbing & Pipe Repair' },
+  { id: 'cat-electrical-03', slug: 'electrical', name: 'Electrical & Appliances', nameEn: 'Electrical & Appliances' },
+  { id: 'cat-carpentry-04', slug: 'carpentry', name: 'Carpentry & Furniture', nameEn: 'Carpentry & Furniture' },
+  { id: 'cat-maintenance-05', slug: 'maintenance', name: 'General Maintenance', nameEn: 'General Maintenance' },
+];
 
 export default function HomePage() {
   const t = useTranslations('home');
-  const [mode, setMode] = React.useState<'help' | 'work'>('help');
+  const router = useRouter();
+  const { user } = useAuth();
 
-  const categories = [
-    { id: 'cleaning', name: t('cleaning'), icon: Sparkles, count: '14 providers' },
-    { id: 'plumbing', name: t('plumbing'), icon: Wrench, count: '9 providers' },
-    { id: 'electrical', name: t('electrical'), icon: Zap, count: '12 providers' },
-    { id: 'carpentry', name: t('carpentry'), icon: Hammer, count: '8 providers' },
-    { id: 'maintenance', name: t('maintenance'), icon: Shield, count: '11 providers' },
-  ];
+  const [mode, setMode] = React.useState<'help' | 'work'>('help');
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Data states
+  const [categories, setCategories] = React.useState<CategoryItem[]>(INITIAL_CATEGORIES);
+  const [recentJobs, setRecentJobs] = React.useState<JobItem[]>([]);
+  const [providers, setProviders] = React.useState<ProviderItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fetchData = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [catsRes, jobsRes, provsRes] = await Promise.all([
+        apiClient<CategoryItem[]>('/api/v1/categories').catch(() => []),
+        apiClient<{ items?: any[]; jobs?: any[] }>('/api/v1/jobs?limit=5').catch(() => ({ items: [] })),
+        apiClient<{ items?: any[]; providers?: any[] }>('/api/v1/providers?limit=4').catch(() => ({ items: [] })),
+      ]);
+
+      setCategories(catsRes || []);
+
+      const rawJobs = (jobsRes as any)?.items || (jobsRes as any)?.jobs || [];
+      const formattedJobs: JobItem[] = rawJobs.map((j: any) => ({
+        id: j.id,
+        title: j.title,
+        description: j.description || '',
+        categoryName: j.category?.name || j.category?.nameEn || 'General',
+        areaName: j.area?.name || j.serviceArea?.name || 'Kigali',
+        budgetAmount: j.budget?.amount ?? j.budgetAmount ?? null,
+        budgetNegotiable: j.budget?.negotiable ?? j.budgetNegotiable ?? true,
+        timingPreference: j.timingPreference || 'Flexible',
+        offerCount: j.offerCount || 0,
+        timeAgo: 'Recently',
+        status: j.status || 'OPEN',
+        photoCount: j.photos?.length || j.attachments?.length || 0,
+      }));
+      setRecentJobs(formattedJobs);
+
+      const rawProviders = (provsRes as any)?.items || (provsRes as any)?.providers || [];
+      setProviders(rawProviders);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load marketplace data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      if (mode === 'help') {
+        router.push(`/providers?search=${encodeURIComponent(searchQuery.trim())}`);
+      } else {
+        router.push(`/jobs?search=${encodeURIComponent(searchQuery.trim())}`);
+      }
+    }
+  };
+
+  const hasProviderProfile = !!user?.providerProfile;
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* Mode Switcher Segmented Control */}
-      <div className="p-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] sticky top-0 z-20">
-        <div className="max-w-xl mx-auto flex rounded-[var(--radius-control)] bg-[var(--color-surface-2)] p-1 border border-[var(--color-border)]">
+      {/* Mode Switcher Segmented Control matching PointMe reference */}
+      <div className="w-full max-w-md mx-auto px-4 pt-4 pb-2 sticky top-0 z-20 bg-[#FAF9F6]/90 backdrop-blur-md">
+        <div className="flex rounded-full bg-[#E8E7E3] p-1 shadow-inner">
           <button
+            type="button"
             onClick={() => setMode('help')}
-            className={`flex-1 py-2 text-[14px] font-semibold rounded-[var(--radius-control)] transition-all min-h-[44px] ${
+            className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all min-h-[40px] ${
               mode === 'help'
-                ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm'
-                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                ? 'bg-[#1F513F] text-white shadow-sm'
+                : 'text-[#5E6862] hover:text-[#1A201C]'
             }`}
           >
-            {t('findHelp')}
+            Seeking Help
           </button>
           <button
+            type="button"
             onClick={() => setMode('work')}
-            className={`flex-1 py-2 text-[14px] font-semibold rounded-[var(--radius-control)] transition-all min-h-[44px] ${
+            className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all min-h-[40px] ${
               mode === 'work'
-                ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm'
-                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                ? 'bg-[#1F513F] text-white shadow-sm'
+                : 'text-[#5E6862] hover:text-[#1A201C]'
             }`}
           >
-            {t('findWork')}
+            Offering Help
           </button>
         </div>
       </div>
 
       <div className="p-4 max-w-3xl mx-auto w-full space-y-6">
-        {mode === 'help' ? (
-          <>
-            {/* Hero Banner */}
-            <div className="rounded-[var(--radius-card)] bg-[var(--color-primary-tint)] border border-[var(--color-primary)]/20 p-5">
-              <span className="text-[12px] font-bold tracking-wider uppercase text-[var(--color-primary)]">
-                Kigali, Rwanda
-              </span>
-              <h1 className="text-[24px] font-bold tracking-tight text-[var(--color-text)] mt-1">
-                {t('tagline')}
-              </h1>
-              <p className="text-[14px] text-[var(--color-text-secondary)] mt-1">
-                {t('subheading')}
-              </p>
+        {error && (
+          <ErrorState
+            title="Connection Issue"
+            description={error}
+            onRetry={fetchData}
+          />
+        )}
 
-              <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                <Link href="/post" className="w-full sm:w-auto">
-                  <Button variant="primary" fullWidth>
-                    {t('postCta')}
-                  </Button>
-                </Link>
+        {/* ─── MODE: FIND HELP ─── */}
+        {mode === 'help' && (
+          <>
+            {/* Hero Banner with Rwanda Topography motif */}
+            <HeroBanner
+              areaName={user?.customerProfile?.neighborhood || 'Kigali, Rwanda'}
+              tagline={t('tagline')}
+              subheading={t('subheading')}
+            >
+              {/* Search Bar inside Hero */}
+              <form onSubmit={handleSearchSubmit} className="mt-2 flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-[var(--color-text-tertiary)] pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by service (e.g. leaking sink, cleaner, wiring)..."
+                    className="w-full h-11 pl-10 pr-3 rounded-[var(--radius-control)] bg-white text-[14px] text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)] border-0 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  />
+                </div>
+                <Button type="submit" variant="primary" size="sm" className="bg-[var(--color-accent)] text-[#123B2C] hover:opacity-90 font-bold shrink-0">
+                  Search
+                </Button>
+              </form>
+
+              <div className="pt-2 flex">
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={() => router.push('/post')}
+                  className="bg-white text-[var(--color-primary)] hover:bg-[#FAF9F6] font-bold"
+                >
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  {t('postCta')}
+                </Button>
               </div>
-            </div>
+            </HeroBanner>
 
             {/* Category Grid */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-[18px] font-bold text-[var(--color-text)]">
+                <h2 className="text-[18px] font-bold text-[var(--color-text)] font-display">
                   {t('categories')}
                 </h2>
-                <Link
-                  href="/providers"
+                <button
+                  type="button"
+                  onClick={() => router.push('/providers')}
                   className="text-[13px] font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1"
                 >
-                  Explore all <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+                  View all <ArrowRight className="h-3.5 w-3.5" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {categories.map((cat) => {
-                  const Icon = cat.icon;
-                  return (
-                    <Card
-                      key={cat.id}
-                      interactive
-                      className="p-4 flex flex-col items-start gap-2 hover:border-[var(--color-primary)]"
-                    >
-                      <div className="h-10 w-10 rounded-lg bg-[var(--color-primary-tint)] text-[var(--color-primary)] flex items-center justify-center">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-[14px] text-[var(--color-text)]">
-                          {cat.name}
-                        </h3>
-                        <p className="text-[12px] text-[var(--color-text-tertiary)]">
-                          {cat.count}
-                        </p>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </section>
-
-            {/* Recent Demo Requests */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[18px] font-bold text-[var(--color-text)]">
-                  {t('recentJobs')}
-                </h2>
-                <span className="text-[12px] text-[var(--color-text-secondary)]">
-                  Demo content
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {[
-                  {
-                    title: 'Fix kitchen sink pipe leak',
-                    area: 'Remera, Gasabo',
-                    budget: '8,000 RWF',
-                    time: '15m ago',
-                    offers: '2 offers',
-                  },
-                  {
-                    title: 'Deep cleaning 2-bedroom apartment',
-                    area: 'Kacyiru, Gasabo',
-                    budget: '15,000 RWF',
-                    time: '45m ago',
-                    offers: '4 offers',
-                  },
-                  {
-                    title: 'Repair wooden dining chairs',
-                    area: 'Nyamirambo, Nyarugenge',
-                    budget: 'Negotiable',
-                    time: '2h ago',
-                    offers: '1 offer',
-                  },
-                ].map((job, idx) => (
-                  <Card key={idx} className="p-4 flex flex-col gap-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-[15px] text-[var(--color-text)]">
-                        {job.title}
-                      </h3>
-                      <span className="text-[16px] font-bold text-[var(--color-accent-text)] tabular-nums shrink-0">
-                        {job.budget}
-                      </span>
+              {loading && categories.length === 0 ? (
+                <div className="grid grid-cols-2 gap-3.5">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Skeleton key={i} className="aspect-[4/3] rounded-xl" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3.5">
+                  {(categories.length > 0 ? categories : INITIAL_CATEGORIES).map((cat) => {
+                    const photoUrl =
+                      (cat as any).coverPhotoUrl ||
+                      DEFAULT_CATEGORY_PHOTOS[cat.slug] ||
+                      DEFAULT_CATEGORY_PHOTOS.maintenance;
+                    return (
+                      <button
+                        key={cat.slug}
+                        type="button"
+                        onClick={() => router.push(`/jobs?category=${cat.slug}`)}
+                        className="group flex flex-col rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)] text-left hover:border-[var(--color-primary)] transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                      >
+                        <div className="aspect-[4/3] w-full overflow-hidden bg-[var(--color-surface-2)]">
+                          <img
+                            src={photoUrl}
+                            alt={cat.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="p-3">
+                          <h3 className="text-[15px] font-semibold text-[var(--color-text)] truncate">
+                            {cat.name}
+                          </h3>
+                          {cat.jobCount && cat.jobCount > 0 ? (
+                            <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">
+                              {cat.jobCount} open task{cat.jobCount > 1 ? 's' : ''}
+                            </p>
+                          ) : null}
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {/* 6th neutral All Services card */}
+                  <button
+                    type="button"
+                    onClick={() => router.push('/jobs')}
+                    className="group flex flex-col rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)] text-left hover:border-[var(--color-primary)] transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] justify-between"
+                  >
+                    <div className="aspect-[4/3] w-full bg-[var(--color-surface-2)] flex items-center justify-center text-[var(--color-text-secondary)] group-hover:text-[var(--color-primary)] transition-colors">
+                      <Briefcase className="h-8 w-8 stroke-[1.5]" />
                     </div>
-
-                    <div className="flex items-center gap-3 text-[12px] text-[var(--color-text-secondary)]">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {job.area}
-                      </span>
-                      <span>·</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {job.time}
-                      </span>
-                      <span className="ml-auto">
-                        <Badge status="open" label={job.offers} />
-                      </span>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          </>
-        ) : (
-          /* Find Work Feed */
-          <div className="space-y-4">
-            <div className="p-4 rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-border)]">
-              <h2 className="text-[18px] font-bold text-[var(--color-text)]">
-                Provider Opportunities Feed
-              </h2>
-              <p className="text-[14px] text-[var(--color-text-secondary)] mt-1">
-                Open service requests filtered by your selected categories and Kigali neighborhoods.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                {
-                  title: 'Bathroom water heater installation',
-                  area: 'Kimihurura, Gasabo',
-                  budget: '25,000 RWF',
-                  desc: 'Need an electrician/plumber to safely mount and wire an instant water heater.',
-                  time: '10m ago',
-                },
-                {
-                  title: 'Sofa upholstery repair',
-                  area: 'Gikondo, Kicukiro',
-                  budget: '35,000 RWF',
-                  desc: '3-seater fabric sofa needs tear repair and re-cushioning.',
-                  time: '1h ago',
-                },
-              ].map((job, idx) => (
-                <Card key={idx} className="p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-[16px] text-[var(--color-text)]">
-                        {job.title}
+                    <div className="p-3">
+                      <h3 className="text-[15px] font-semibold text-[var(--color-text)]">
+                        All Services
                       </h3>
-                      <p className="text-[12px] text-[var(--color-text-secondary)] flex items-center gap-1 mt-0.5">
-                        <MapPin className="h-3.5 w-3.5" /> {job.area} · {job.time}
+                      <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">
+                        Explore all Kigali categories
                       </p>
                     </div>
-                    <span className="text-[18px] font-bold text-[var(--color-accent-text)] tabular-nums">
-                      {job.budget}
-                    </span>
-                  </div>
+                  </button>
+                </div>
+              )}
+            </section>
 
-                  <p className="text-[14px] text-[var(--color-text-secondary)]">
-                    {job.desc}
+            {/* Verified Providers Near You */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[18px] font-bold text-[var(--color-text)] font-display">
+                  Verified Providers in Kigali
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => router.push('/providers')}
+                  className="text-[13px] font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1"
+                >
+                  See directory <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {loading && providers.length === 0 ? (
+                <div className="space-y-2.5">
+                  <Skeleton className="h-24 rounded-[var(--radius-card)]" />
+                  <Skeleton className="h-24 rounded-[var(--radius-card)]" />
+                </div>
+              ) : providers.length > 0 ? (
+                <div className="space-y-2.5">
+                  {providers.map((p) => (
+                    <ProviderCard
+                      key={p.id}
+                      id={p.id}
+                      businessName={p.businessName}
+                      bio={p.bio}
+                      areaName={p.area}
+                      completedJobs={p.completedJobs}
+                      ratingAverage={p.ratingAverage || undefined}
+                      ratingCount={p.ratingCount}
+                      verificationLevel={p.verificationLevel as any}
+                      onClick={() => router.push(`/providers/${p.id}`)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-6 text-center text-[var(--color-text-secondary)]">
+                  <p className="text-[14px]">
+                    No providers listed in this area yet. Be the first to register your service skills!
                   </p>
-
-                  <div className="pt-2 border-t border-[var(--color-border)] flex justify-end">
-                    <Button variant="primary" size="sm">
-                      Send Offer
-                    </Button>
-                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => router.push('/auth')}
+                  >
+                    Join as a Provider
+                  </Button>
                 </Card>
-              ))}
+              )}
+            </section>
+
+            {/* Recent Service Requests */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[18px] font-bold text-[var(--color-text)] font-display">
+                  {t('recentJobs')}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => router.push('/jobs')}
+                  className="text-[13px] font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1"
+                >
+                  {t('viewAll')} <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {loading && recentJobs.length === 0 ? (
+                <div className="space-y-2.5">
+                  <Skeleton className="h-28 rounded-[var(--radius-card)]" />
+                  <Skeleton className="h-28 rounded-[var(--radius-card)]" />
+                </div>
+              ) : recentJobs.length > 0 ? (
+                <div className="space-y-2.5">
+                  {recentJobs.map((job) => (
+                    <JobCard
+                      key={job.id}
+                      id={job.id}
+                      title={job.title}
+                      categoryName={job.categoryName}
+                      areaName={job.areaName}
+                      budgetAmount={job.budgetAmount || undefined}
+                      budgetNegotiable={job.budgetNegotiable}
+                      timingPreference={job.timingPreference}
+                      offerCount={job.offerCount}
+                      timeAgo={job.timeAgo}
+                      status={job.status}
+                      photoCount={job.photoCount}
+                      onClick={() => router.push(`/jobs/${job.id}`)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Briefcase}
+                  title="No active requests"
+                  description="Be the first neighbor to post a request in your area."
+                  action={{
+                    label: "Post a Job",
+                    onClick: () => router.push('/post'),
+                  }}
+                />
+              )}
+            </section>
+          </>
+        )}
+
+        {/* ─── MODE: FIND WORK (PROVIDER OPPORTUNITIES FEED) ─── */}
+        {mode === 'work' && (
+          <div className="space-y-5">
+            {/* Provider Profile Completeness Nudge */}
+            {!hasProviderProfile ? (
+              <Card className="p-5 border-l-4 border-l-[var(--color-accent)] space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--color-accent-tint)] text-[var(--color-accent-text)] flex items-center justify-center shrink-0">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[16px] text-[var(--color-text)]">
+                      Set Up Your Provider Profile
+                    </h3>
+                    <p className="text-[13px] text-[var(--color-text-secondary)] mt-0.5">
+                      Tell Kigali clients about your skills, service areas, and work hours to start submitting offers.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => router.push('/auth')}
+                  >
+                    Complete Profile Setup
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="p-4 rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-border)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-[18px] font-bold text-[var(--color-text)] font-display">
+                      Open Job Requests
+                    </h2>
+                    <p className="text-[13px] text-[var(--color-text-secondary)] mt-0.5">
+                      Service opportunities in Kigali ready for your offer.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-[var(--color-primary-tint)] text-[var(--color-primary)]">
+                    0% Fee
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Open Jobs List for Providers */}
+            <div className="space-y-3">
+              {loading && recentJobs.length === 0 ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-32 rounded-[var(--radius-card)]" />
+                  <Skeleton className="h-32 rounded-[var(--radius-card)]" />
+                </div>
+              ) : recentJobs.length > 0 ? (
+                recentJobs.map((job) => (
+                  <JobCard
+                    key={job.id}
+                    id={job.id}
+                    title={job.title}
+                    categoryName={job.categoryName}
+                    areaName={job.areaName}
+                    budgetAmount={job.budgetAmount || undefined}
+                    budgetNegotiable={job.budgetNegotiable}
+                    timingPreference={job.timingPreference}
+                    offerCount={job.offerCount}
+                    timeAgo={job.timeAgo}
+                    status={job.status}
+                    photoCount={job.photoCount}
+                    onClick={() => router.push(`/jobs/${job.id}`)}
+                  />
+                ))
+              ) : (
+                <EmptyState
+                  icon={Briefcase}
+                  title="No open jobs right now"
+                  description="Check back shortly or adjust your service categories."
+                />
+              )}
             </div>
           </div>
         )}
@@ -246,4 +498,3 @@ export default function HomePage() {
     </div>
   );
 }
-

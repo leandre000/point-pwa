@@ -3,13 +3,17 @@
 import * as React from 'react';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
-import { BottomNav, DEFAULT_NAV_ITEMS, type NavItem } from '@kiraka/ui';
+import { BottomNav, type NavItem, Logo } from '@kiraka/ui';
 import { Briefcase, Home, MessageSquare, PlusCircle, User, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context.js';
+import { useAuthGate } from '@/components/AuthGate.js';
 
 export function NavigationShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations('nav');
+  const { isAuthenticated } = useAuth();
+  const { openAuthGate } = useAuthGate();
 
   const navItems: NavItem[] = React.useMemo(
     () => [
@@ -32,6 +36,16 @@ export function NavigationShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const handleSelect = (item: NavItem) => {
+    // Section 3: Gated tabs for guests
+    if (!isAuthenticated && (item.id === 'post' || item.id === 'messages')) {
+      openAuthGate(
+        item.id === 'post'
+          ? 'Sign in to post a task request to nearby Kigali service providers.'
+          : 'Sign in to view your direct conversations with providers and customers.',
+        item.href,
+      );
+      return;
+    }
     router.push(item.href);
   };
 
@@ -39,16 +53,8 @@ export function NavigationShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* Desktop Sidebar Navigation */}
       <aside className="hidden md:flex flex-col w-64 border-r border-[var(--color-border)] bg-[var(--color-surface)] p-4 shrink-0">
-        <div className="flex items-center gap-2.5 px-3 py-4 mb-4">
-          <div className="h-9 w-9 rounded-lg bg-[var(--color-primary)] text-white flex items-center justify-center font-bold text-xl">
-            K
-          </div>
-          <div>
-            <h1 className="font-bold text-[18px] tracking-tight text-[var(--color-text)]">
-              KIRAKA
-            </h1>
-            <p className="text-[12px] text-[var(--color-text-tertiary)]">Kigali, Rwanda</p>
-          </div>
+        <div className="px-2 py-3 mb-4">
+          <Logo variant="full" size="default" />
         </div>
 
         <nav className="flex flex-col gap-1.5 flex-1">
@@ -92,4 +98,3 @@ export function NavigationShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

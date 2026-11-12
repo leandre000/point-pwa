@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
+  <!-- Logomark -->
+  <g transform="translate(10, 10)">
+    <rect width="60" height="60" rx="14" fill="#205641" />
+    <g transform="scale(0.3125)">
+      <rect x="44" y="42" width="22" height="108" rx="7" fill="#FAF9F6" />
+      <path d="M66 102 L118 150 C121 153 126 153 130 150 L140 140 C143 137 143 132 140 129 L96 89 Z" fill="#FAF9F6" />
+      <path d="M66 90 L108 52 C111 49 116 50 119 53 L126 60 C129 63 129 68 126 71 L88 106 Z" fill="#FAF9F6" />
+      <path d="M130 38 C144 38 155 49 155 63 C155 77 138 97 132 103 C131 104 129 104 128 103 C122 97 105 77 105 63 C105 49 116 38 130 38 Z" fill="#E0A12B" />
+      <circle cx="130" cy="63" r="8" fill="#FAF9F6" />
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="86" y="44" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="28" font-weight="800" letter-spacing="-0.03em" fill="#1E2421">
+    KIRAKA
+  </text>
+
+  <!-- Tagline -->
+  <text x="86" y="62" font-family="'Inter', system-ui, sans-serif" font-size="12" font-weight="500" letter-spacing="-0.01em" fill="#4F5953">
+    Find help. Discover opportunity.
+  </text>
+</svg>
+

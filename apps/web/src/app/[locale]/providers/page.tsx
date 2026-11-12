@@ -1,122 +1,143 @@
 'use client';
 
 import * as React from 'react';
-import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import {
   TopAppBar,
-  SearchField,
   ProviderCard,
   EmptyState,
   Skeleton,
+  ErrorState,
 } from '@kiraka/ui';
-import { Search } from 'lucide-react';
+import { Search, UserCheck } from 'lucide-react';
+import { apiClient } from '@/lib/api-client.js';
+
+interface ProviderItem {
+  id: string;
+  businessName: string;
+  bio?: string;
+  verificationLevel: string;
+  completedJobs: number;
+  ratingAverage: number | null;
+  ratingCount: number;
+  area: string;
+}
+
+const KIGALI_AREAS = [
+  'All',
+  'Remera',
+  'Kacyiru',
+  'Kimihurura',
+  'Kimironko',
+  'Kibagabaga',
+  'Gisozi',
+  'Nyamirambo',
+  'Kicukiro',
+  'Gikondo',
+];
+
+const CATEGORIES = [
+  'All',
+  'Cleaning',
+  'Plumbing',
+  'Electrical',
+  'Carpentry',
+  'Maintenance',
+];
 
 export default function ProvidersExplorePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedArea, setSelectedArea] = React.useState('All');
   const [selectedCategory, setSelectedCategory] = React.useState('All');
-  const [loading, setLoading] = React.useState(false);
 
-  const areas = ['All', 'Remera', 'Kacyiru', 'Kimihurura', 'Nyamirambo', 'Kiyovu', 'Gikondo'];
-  const categories = ['All', 'Cleaning', 'Plumbing', 'Electrical', 'Carpentry', 'Maintenance'];
+  const [providers, setProviders] = React.useState<ProviderItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  // Demo providers list
-  const providers = [
-    {
-      id: 'prov-1',
-      businessName: 'Eric Carpentry & Repair',
-      category: 'Carpentry',
-      areaName: 'Remera, Gasabo',
-      distanceBand: '~1.2 km',
-      ratingAverage: 4.8,
-      ratingCount: 14,
-      completedJobs: 16,
-      verificationLevel: 'PHONE_VERIFIED',
-      bio: 'Cabinet installation, chair repairs, and door restoration.',
-    },
-    {
-      id: 'prov-2',
-      businessName: 'Aline Sparkle Cleaning',
-      category: 'Cleaning',
-      areaName: 'Kacyiru, Gasabo',
-      distanceBand: '~2.4 km',
-      ratingAverage: 4.9,
-      ratingCount: 22,
-      completedJobs: 25,
-      verificationLevel: 'PHONE_VERIFIED',
-      bio: 'Deep residential cleaning, move-in preparation, and window polishing.',
-    },
-    {
-      id: 'prov-3',
-      businessName: 'Patrick Express Plumbing',
-      category: 'Plumbing',
-      areaName: 'Kimihurura, Gasabo',
-      distanceBand: '~3.1 km',
-      ratingAverage: 4.7,
-      ratingCount: 9,
-      completedJobs: 11,
-      verificationLevel: 'PHONE_VERIFIED',
-      bio: 'Water heater installation, pipe unblocking, and faucet replacements.',
-    },
-    {
-      id: 'prov-4',
-      businessName: 'Gervais Electrical Kigali',
-      category: 'Electrical',
-      areaName: 'Nyamirambo, Nyarugenge',
-      distanceBand: '~4.5 km',
-      ratingAverage: 5.0,
-      ratingCount: 6,
-      completedJobs: 8,
-      verificationLevel: 'PHONE_VERIFIED',
-      bio: 'Certified electrical wiring, generator hookups, and breaker panel repair.',
-    },
-  ];
+  const fetchProviders = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery.trim()) params.append('search', searchQuery.trim());
+      if (selectedArea !== 'All') params.append('area', selectedArea);
+
+      const res = await apiClient<{ providers?: ProviderItem[]; items?: ProviderItem[] }>(
+        `/api/v1/providers?${params.toString()}`,
+      ).catch(() => ({ items: [] }));
+
+      const list = (res as any)?.items || (res as any)?.providers || [];
+      setProviders(list);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load providers.');
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, selectedArea]);
+
+  React.useEffect(() => {
+    fetchProviders();
+  }, [fetchProviders]);
 
   const filteredProviders = providers.filter((p) => {
-    const matchesSearch =
-      !searchQuery ||
-      p.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.bio.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesArea =
-      selectedArea === 'All' || p.areaName.toLowerCase().includes(selectedArea.toLowerCase());
-
-    const matchesCategory =
-      selectedCategory === 'All' || p.category.toLowerCase() === selectedCategory.toLowerCase();
-
-    return matchesSearch && matchesArea && matchesCategory;
+    if (selectedCategory !== 'All') {
+      const matchCat = (p.bio || '').toLowerCase().includes(selectedCategory.toLowerCase()) ||
+                       p.businessName.toLowerCase().includes(selectedCategory.toLowerCase());
+      if (!matchCat) return false;
+    }
+    return true;
   });
 
   return (
     <div className="flex flex-col min-h-full">
       <TopAppBar
-        title="Find Providers in Kigali"
-        subtitle="Vetted by completed jobs & phone verified"
+        title="Verified Providers"
         onBack={() => router.push('/')}
       />
 
-      <div className="p-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] space-y-3 sticky top-14 z-20">
-        <SearchField
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search by skill, name or trade..."
-        />
+      <div className="p-4 max-w-xl mx-auto w-full space-y-4">
+        {/* Search Field */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-[var(--color-text-tertiary)] pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search provider by name, skill, or service..."
+            className="w-full h-11 pl-10 pr-3 rounded-[var(--radius-control)] bg-[var(--color-surface)] border border-[var(--color-border)] text-[14px] text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-primary)] focus:outline-none"
+          />
+        </div>
 
-        {/* Neighborhood chips */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-          <span className="text-[12px] font-semibold text-[var(--color-text-tertiary)] shrink-0">
-            Area:
-          </span>
-          {areas.map((area) => (
+        {/* Category Filter Chips */}
+        <div className="flex gap-2 pb-1 overflow-x-auto">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all shrink-0 min-h-[38px] ${
+                selectedCategory === cat
+                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                  : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Neighborhood Filter Chips */}
+        <div className="flex gap-1.5 pb-1 overflow-x-auto">
+          {KIGALI_AREAS.map((area) => (
             <button
               key={area}
+              type="button"
               onClick={() => setSelectedArea(area)}
-              className={`px-3 py-1 rounded-full text-[12px] font-medium border shrink-0 transition-colors ${
+              className={`px-3 py-1 rounded-[var(--radius-control)] text-[12px] font-medium transition-all shrink-0 ${
                 selectedArea === area
-                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                  : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-border-strong)]'
+                  ? 'bg-[var(--color-primary-tint)] text-[var(--color-primary)] font-bold border border-[var(--color-primary)]'
+                  : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
               }`}
             >
               {area}
@@ -124,72 +145,56 @@ export default function ProvidersExplorePage() {
           ))}
         </div>
 
-        {/* Category chips */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          <span className="text-[12px] font-semibold text-[var(--color-text-tertiary)] shrink-0">
-            Trade:
-          </span>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1 rounded-full text-[12px] font-medium border shrink-0 transition-colors ${
-                selectedCategory === cat
-                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                  : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-border-strong)]'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
+        {error && (
+          <ErrorState
+            title="Unable to load directory"
+            description={error}
+            onRetry={fetchProviders}
+          />
+        )}
 
-      <div className="p-4 max-w-2xl mx-auto w-full flex-1">
+        {/* Providers List */}
         {loading ? (
           <div className="space-y-3">
-            <Skeleton variant="card" />
-            <Skeleton variant="card" />
-            <Skeleton variant="card" />
+            <Skeleton className="h-28 rounded-[var(--radius-card)]" />
+            <Skeleton className="h-28 rounded-[var(--radius-card)]" />
+            <Skeleton className="h-28 rounded-[var(--radius-card)]" />
           </div>
         ) : filteredProviders.length > 0 ? (
           <div className="space-y-3">
-            <p className="text-[12px] text-[var(--color-text-secondary)]">
-              Showing {filteredProviders.length} providers in Kigali
-            </p>
-            {filteredProviders.map((p) => (
+            {filteredProviders.map((provider) => (
               <ProviderCard
-                key={p.id}
-                id={p.id}
-                businessName={p.businessName}
-                bio={p.bio}
-                areaName={p.areaName}
-                distanceBand={p.distanceBand}
-                ratingAverage={p.ratingAverage}
-                ratingCount={p.ratingCount}
-                completedJobs={p.completedJobs}
-                verificationLevel={p.verificationLevel}
-                onClick={() => router.push(`/post`)}
+                key={provider.id}
+                id={provider.id}
+                businessName={provider.businessName}
+                bio={provider.bio}
+                areaName={provider.area}
+                completedJobs={provider.completedJobs}
+                ratingAverage={provider.ratingAverage || undefined}
+                ratingCount={provider.ratingCount}
+                verificationLevel={provider.verificationLevel as any}
+                onClick={() => router.push(`/providers/${provider.id}`)}
               />
             ))}
           </div>
         ) : (
-          <EmptyState
-            icon={Search}
-            title="No providers found"
-            description="Try changing your search terms or selecting 'All' neighborhoods."
-            action={{
-              label: 'Reset Filters',
-              onClick: () => {
-                setSearchQuery('');
-                setSelectedArea('All');
-                setSelectedCategory('All');
-              },
-            }}
-          />
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <EmptyState
+              icon={UserCheck}
+              title="No providers found"
+              description="No service providers match your search filters. Try selecting 'All' or widening your neighborhood."
+              action={{
+                label: 'Clear Filters',
+                onClick: () => {
+                  setSearchQuery('');
+                  setSelectedArea('All');
+                  setSelectedCategory('All');
+                },
+              }}
+            />
+          </div>
         )}
       </div>
     </div>
   );
 }
-

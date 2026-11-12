@@ -2,69 +2,37 @@
 
 import * as React from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
-
+/**
+ * D-016: Clean warm Kigali light theme only.
+ * Dark mode, high contrast, and theme switching removed in this release.
+ */
 interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  resolvedTheme: 'light' | 'dark';
+  theme: 'light';
+  setTheme: (theme: 'light') => void;
+  resolvedTheme: 'light';
 }
 
-const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = React.createContext<ThemeContextType>({
+  theme: 'light',
+  setTheme: () => {},
+  resolvedTheme: 'light',
+});
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = React.useState<Theme>('system');
-  const [resolvedTheme, setResolvedTheme] = React.useState<'light' | 'dark'>('light');
-
   React.useEffect(() => {
-    const saved = localStorage.getItem('kiraka-theme') as Theme | null;
-    if (saved && ['light', 'dark', 'system'].includes(saved)) {
-      setThemeState(saved);
-    }
+    // Strictly enforce light theme across all devices and OS preferences per D-016
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark');
   }, []);
 
-  React.useEffect(() => {
-    const root = document.documentElement;
-
-    const applyTheme = () => {
-      if (theme === 'system') {
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const active = systemDark ? 'dark' : 'light';
-        root.setAttribute('data-theme', active);
-        setResolvedTheme(active);
-      } else {
-        root.setAttribute('data-theme', theme);
-        setResolvedTheme(theme);
-      }
-    };
-
-    applyTheme();
-
-    if (theme === 'system') {
-      const media = window.matchMedia('(prefers-color-scheme: dark)');
-      const listener = () => applyTheme();
-      media.addEventListener('change', listener);
-      return () => media.removeEventListener('change', listener);
-    }
-  }, [theme]);
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('kiraka-theme', newTheme);
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={{ theme: 'light', setTheme: () => {}, resolvedTheme: 'light' }}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
 export function useTheme() {
-  const context = React.useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
+  return React.useContext(ThemeContext);
 }
 

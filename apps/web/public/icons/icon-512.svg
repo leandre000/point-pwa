@@ -1,6 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="96" fill="#205641"/>
-  <path d="M138 122h64v112l101-112h86l-117 128 123 138h-86l-107-122v122h-64V122z" fill="#FAF9F6"/>
-  <circle cx="372" cy="138" r="28" fill="#C98A1B"/>
-</svg>
+  <defs>
+    <linearGradient id="kirakaGrad512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#24634B" />
+      <stop offset="100%" stop-color="#194735" />
+    </linearGradient>
+    <filter id="subtleShadow512" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-opacity="0.22" flood-color="#0C2B20" />
+    </filter>
+  </defs>
 
+  <!-- Container Rounded Square -->
+  <rect width="512" height="512" rx="112" fill="url(#kirakaGrad512)" />
+  <rect x="2" y="2" width="508" height="508" rx="110" fill="none" stroke="#FAF9F6" stroke-opacity="0.12" stroke-width="4" />
+
+  <!-- The "K" Geometry -->
+  <g filter="url(#subtleShadow512)" transform="scale(2.6666) translate(0, 0)">
+    <!-- Vertical Stem -->
+    <rect x="44" y="42" width="22" height="108" rx="7" fill="#FAF9F6" />
+
+    <!-- Lower Leg -->
+    <path d="M66 102 L118 150 C121 153 126 153 130 150 L140 140 C143 137 143 132 140 129 L96 89 Z" fill="#FAF9F6" />
+
+    <!-- Upper Arm rising from junction -->
+    <path d="M66 90 L108 52 C111 49 116 50 119 53 L126 60 C129 63 129 68 126 71 L88 106 Z" fill="#FAF9F6" />
+
+    <!-- Location Pin Head integrated into upper arm -->
+    <path d="M130 38 C144 38 155 49 155 63 C155 77 138 97 132 103 C131 104 129 104 128 103 C122 97 105 77 105 63 C105 49 116 38 130 38 Z" fill="#E0A12B" />
+
+    <!-- Location Pin Center Hole -->
+    <circle cx="130" cy="63" r="8" fill="#FAF9F6" />
+  </g>
+</svg>

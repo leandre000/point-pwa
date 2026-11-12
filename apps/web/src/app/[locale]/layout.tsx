@@ -5,7 +5,10 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { NavigationShell } from '@/components/NavigationShell';
+import { AuthProvider } from '@/lib/auth-context';
+import { AuthGateProvider } from '@/components/AuthGate';
 import '@kiraka/ui/globals.css';
+import '../globals.css';
 
 export const metadata: Metadata = {
   title: 'KIRAKA — Find help. Discover opportunity.',
@@ -51,9 +54,13 @@ export default async function LocaleLayout({
       </head>
       <body className="antialiased min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col">
         <NextIntlClientProvider messages={messages}>
-          <ThemeProvider>
-            <NavigationShell>{children}</NavigationShell>
-          </ThemeProvider>
+          <AuthProvider>
+            <AuthGateProvider>
+              <ThemeProvider>
+                <NavigationShell>{children}</NavigationShell>
+              </ThemeProvider>
+            </AuthGateProvider>
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

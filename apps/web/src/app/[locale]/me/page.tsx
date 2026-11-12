@@ -1,298 +1,489 @@
 'use client';
 
 import * as React from 'react';
-import { useTranslations } from 'next-intl';
-import { usePathname, useRouter, Link } from '@/i18n/routing';
-import { TopAppBar, Card, Avatar, Button, Badge } from '@kiraka/ui';
-import { useTheme } from '@/components/ThemeProvider';
+import { useRouter } from '@/i18n/routing';
+import {
+  TopAppBar,
+  Card,
+  Avatar,
+  Button,
+  Badge,
+  Input,
+  Banner,
+} from '@kiraka/ui';
+import { useAuth } from '@/lib/auth-context.js';
+import { ImageUploader } from '@/components/ImageUploader.js';
+import { UploadPurpose } from '@kiraka/contracts';
+import { apiClient } from '@/lib/api-client.js';
 import {
   User,
   Wrench,
-  Bell,
-  Globe,
-  SunMoon,
-  Shield,
+  ShieldCheck,
   HelpCircle,
   LogOut,
   ChevronRight,
-  ShieldCheck,
-  Smartphone,
+  Briefcase,
+  Lock,
+  Mail,
+  MapPin,
   CheckCircle2,
-  Eye,
-  EyeOff,
+  AlertTriangle,
+  Camera,
+  X,
+  Shield,
+  FileText,
 } from 'lucide-react';
 
+const KIGALI_NEIGHBORHOODS = [
+  'Remera, Gasabo',
+  'Kacyiru, Gasabo',
+  'Kimihurura, Gasabo',
+  'Kibagabaga, Gasabo',
+  'Nyarutarama, Gasabo',
+  'Kimironko, Gasabo',
+  'Gisozi, Gasabo',
+  'Kicukiro, Kicukiro',
+  'Gikondo, Kicukiro',
+  'Kanombe, Kicukiro',
+  'Nyamirambo, Nyarugenge',
+  'Kagugu, Gasabo',
+];
+
 export default function MePage() {
-  const t = useTranslations('me');
-  const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const pathname = usePathname();
+  const { user, isAuthenticated, logout, refreshUser } = useAuth();
 
-  // User state (demo / local session)
-  const [isSignedIn, setIsSignedIn] = React.useState(true);
-  const [providerVisible, setProviderVisible] = React.useState(true);
-  const [sessions, setSessions] = React.useState([
-    {
-      id: 'sess-1',
-      device: 'Chrome on Android (Current)',
-      ip: '197.243.12.44 · Kigali',
-      isCurrent: true,
-      lastActive: 'Active now',
-    },
-    {
-      id: 'sess-2',
-      device: 'Samsung Internet',
-      ip: '197.243.10.12 · Kigali',
-      isCurrent: false,
-      lastActive: '2 days ago',
-    },
-  ]);
+  // Active view: 'main' | 'personal' | 'provider' | 'security' | 'help'
+  const [view, setView] = React.useState<'main' | 'personal' | 'provider' | 'security' | 'help'>('main');
 
-  const handleLanguageChange = (newLocale: 'en' | 'rw' | 'fr') => {
-    router.replace(pathname, { locale: newLocale });
+  // Personal details state
+  const [fullName, setFullName] = React.useState(user?.fullName || '');
+  const [neighborhood, setNeighborhood] = React.useState(user?.customerProfile?.neighborhood || 'Remera, Gasabo');
+  const [phone, setPhone] = React.useState(user?.phone || '');
+  const [avatarUrl, setAvatarUrl] = React.useState(user?.customerProfile?.avatarUrl || '');
+  const [savingPersonal, setSavingPersonal] = React.useState(false);
+  const [personalSuccess, setPersonalSuccess] = React.useState(false);
+  const [personalError, setPersonalError] = React.useState<string | null>(null);
+
+  // Security states
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [securitySuccess, setSecuritySuccess] = React.useState(false);
+  const [securityError, setSecurityError] = React.useState<string | null>(null);
+
+  // Help ticket states
+  const [ticketSubject, setTicketSubject] = React.useState('');
+  const [ticketMessage, setTicketMessage] = React.useState('');
+  const [ticketSent, setTicketSent] = React.useState(false);
+
+  React.useEffect(() => {
+    if (user) {
+      setFullName(user.fullName || '');
+      setNeighborhood(user.customerProfile?.neighborhood || 'Remera, Gasabo');
+      setPhone(user.phone || '');
+      setAvatarUrl(user.customerProfile?.avatarUrl || '');
+    }
+  }, [user]);
+
+  // ─── GUEST VIEW (Prompt v5 Section 3) ───
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[var(--color-bg)] flex flex-col justify-between">
+        <TopAppBar title="Account" />
+
+        <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md w-full mx-auto text-center space-y-6">
+          <div className="h-16 w-16 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-[var(--color-text-secondary)] mx-auto">
+            <User className="h-8 w-8" />
+          </div>
+
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold text-[var(--color-text)]">Account</h1>
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Sign in to manage your bookings, messages, and profile.
+            </p>
+          </div>
+
+          <div className="w-full space-y-3 pt-2">
+            <Button
+              variant="primary"
+              className="w-full py-3 text-sm font-semibold"
+              onClick={() => router.push('/auth')}
+            >
+              Sign in
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full py-3 text-sm font-semibold"
+              onClick={() => router.push('/auth?mode=register')}
+            >
+              Create an account
+            </Button>
+          </div>
+
+          <div className="pt-6 border-t border-[var(--color-border)] w-full text-xs text-[var(--color-text-tertiary)] space-y-1">
+            <p>KIRAKA Rwanda • Kigali Local Services Marketplace</p>
+            <p>Version 0.1.0</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── AUTHENTICATED USER VIEWS (Prompt v5 Section 8) ───
+
+  const handleSavePersonal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingPersonal(true);
+    setPersonalError(null);
+    setPersonalSuccess(false);
+
+    try {
+      await apiClient('/api/v1/profiles/me', {
+        method: 'PUT',
+        body: JSON.stringify({
+          displayName: fullName.trim(),
+          neighborhood,
+          phone: phone.trim() || null,
+        }),
+      });
+      await refreshUser();
+      setPersonalSuccess(true);
+      setTimeout(() => setPersonalSuccess(false), 3000);
+    } catch (err: any) {
+      setPersonalError(err.message || 'Failed to update personal details.');
+    } finally {
+      setSavingPersonal(false);
+    }
   };
 
-  const handleRevokeOthers = () => {
-    setSessions((prev) => prev.filter((s) => s.isCurrent));
-    alert('Signed out of all other devices successfully.');
+  const handleSignOutEverywhere = async () => {
+    if (!confirm('Are you sure you want to sign out of all devices?')) return;
+    try {
+      await apiClient('/api/v1/auth/logout', { method: 'POST' });
+    } catch {}
+    await logout();
+    router.push('/auth');
   };
 
   return (
-    <div className="flex flex-col min-h-full">
-      <TopAppBar title={t('title')} />
+    <div className="min-h-screen bg-[var(--color-bg)] flex flex-col justify-between">
+      <TopAppBar
+        title={
+          view === 'personal'
+            ? 'Personal Details'
+            : view === 'provider'
+            ? 'Provider Tools'
+            : view === 'security'
+            ? 'Sign-in & Security'
+            : view === 'help'
+            ? 'Help & Support'
+            : 'My Account'
+        }
+        onBack={view !== 'main' ? () => setView('main') : undefined}
+      />
 
-      <div className="p-4 max-w-xl mx-auto w-full space-y-4">
-        {/* User Card */}
-        {isSignedIn ? (
-          <Card className="p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-4">
-              <Avatar name="Eric Mugisha" size="lg" />
-              <div className="flex-1 overflow-hidden">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-[18px] font-bold text-[var(--color-text)] truncate">
-                    Eric Mugisha
-                  </h2>
-                </div>
-                <p className="text-[13px] text-[var(--color-text-secondary)] truncate">
-                  +250 788 ••• ••4 · Remera, Kigali
-                </p>
-                <div className="mt-1 flex items-center gap-2">
-                  {/* BR-12: Phone verified is strictly labeled Phone Verified, never Identity Verified */}
-                  <Badge
-                    status="open"
-                    label="Phone Verified"
-                    icon={ShieldCheck}
-                  />
-                  <span className="text-[11px] text-[var(--color-text-tertiary)]">
-                    (Not an ID check)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Provider Mode / Visibility quick-toggle */}
-            <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
-              <div>
-                <p className="text-[13px] font-semibold text-[var(--color-text)]">
-                  Provider Profile Visibility
-                </p>
-                <p className="text-[11px] text-[var(--color-text-tertiary)]">
-                  {providerVisible ? 'Open to receive new jobs in Kigali' : 'Hidden from search and feeds'}
-                </p>
-              </div>
-              <Button
-                variant={providerVisible ? 'secondary' : 'primary'}
-                size="sm"
-                onClick={() => setProviderVisible(!providerVisible)}
-              >
-                {providerVisible ? (
-                  <>
-                    <EyeOff className="h-4 w-4 mr-1.5" /> Pause
-                  </>
+      <div className="flex-1 p-4 max-w-md w-full mx-auto space-y-5">
+        {/* ═══════════════════════════════════════════════════════════════
+            MAIN ME HUB (Section 8)
+           ═══════════════════════════════════════════════════════════════ */}
+        {view === 'main' && (
+          <div className="space-y-5">
+            {/* User Profile Summary Card */}
+            <Card className="p-4 flex items-center gap-3.5 bg-[var(--color-surface)]">
+              <div className="h-14 w-14 rounded-full bg-[var(--color-primary-tint)] text-[var(--color-primary)] font-bold text-lg flex items-center justify-center overflow-hidden border border-[var(--color-border)]">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                 ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-1.5" /> Go Active
-                  </>
+                  (user?.fullName || user?.email || 'U').slice(0, 2).toUpperCase()
                 )}
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <Card className="p-5 text-center space-y-3">
-            <h2 className="text-[18px] font-bold text-[var(--color-text)]">
-              Welcome to KIRAKA
-            </h2>
-            <p className="text-[14px] text-[var(--color-text-secondary)]">
-              Sign in with your phone number to post requests, submit offers, or view conversations.
-            </p>
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => router.push('/auth')}
-            >
-              Sign In with Mobile
-            </Button>
-          </Card>
-        )}
-
-        {/* Settings Sections */}
-        <div className="space-y-2">
-          {/* Appearance / Theme Toggle */}
-          <Card className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <SunMoon className="h-5 w-5 text-[var(--color-primary)]" />
-              <div>
-                <h3 className="font-semibold text-[14px] text-[var(--color-text)]">
-                  {t('theme')}
-                </h3>
-                <p className="text-[12px] text-[var(--color-text-tertiary)] capitalize">
-                  {theme} mode
-                </p>
               </div>
-            </div>
 
-            <div className="flex rounded-[var(--radius-control)] bg-[var(--color-surface-2)] p-1 border border-[var(--color-border)]">
-              {(['light', 'dark', 'system'] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setTheme(m)}
-                  className={`px-2.5 py-1 text-[12px] font-medium rounded capitalize ${
-                    theme === m
-                      ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm'
-                      : 'text-[var(--color-text-secondary)]'
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          {/* Language Switcher */}
-          <Card className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Globe className="h-5 w-5 text-[var(--color-primary)]" />
-              <div>
-                <h3 className="font-semibold text-[14px] text-[var(--color-text)]">
-                  {t('language')}
-                </h3>
-                <p className="text-[12px] text-[var(--color-text-tertiary)]">
-                  English · Kinyarwanda · Français
-                </p>
-              </div>
-            </div>
-
-            <div className="flex rounded-[var(--radius-control)] bg-[var(--color-surface-2)] p-1 border border-[var(--color-border)]">
-              {[
-                { code: 'en', label: 'EN' },
-                { code: 'rw', label: 'RW' },
-                { code: 'fr', label: 'FR' },
-              ].map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => handleLanguageChange(lang.code as any)}
-                  className="px-2.5 py-1 text-[12px] font-medium rounded hover:bg-[var(--color-surface)] text-[var(--color-text)]"
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          {/* Active Sessions & Security */}
-          {isSignedIn && (
-            <Card className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Smartphone className="h-5 w-5 text-[var(--color-primary)]" />
-                  <div>
-                    <h3 className="font-semibold text-[14px] text-[var(--color-text)]">
-                      Active Devices & Sessions
-                    </h3>
-                    <p className="text-[12px] text-[var(--color-text-tertiary)]">
-                      {sessions.length} active device(s)
-                    </p>
-                  </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-[16px] font-bold text-[var(--color-text)] truncate">
+                  {user?.fullName || 'KIRAKA Member'}
+                </h2>
+                <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)] mt-0.5">
+                  <MapPin className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0" />
+                  <span className="truncate">{user?.customerProfile?.neighborhood || 'Kigali'}</span>
                 </div>
-                {sessions.length > 1 && (
-                  <button
-                    onClick={handleRevokeOthers}
-                    className="text-[12px] font-semibold text-[var(--color-danger)] hover:underline"
-                  >
-                    Sign out others
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
-                {sessions.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between text-[12px] p-2 rounded bg-[var(--color-surface-2)]"
-                  >
-                    <div>
-                      <p className="font-medium text-[var(--color-text)]">{s.device}</p>
-                      <p className="text-[var(--color-text-tertiary)]">{s.ip}</p>
-                    </div>
-                    <span className="text-[var(--color-primary)] font-semibold">
-                      {s.lastActive}
+                <div className="flex gap-1.5 mt-1.5">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-primary-tint)] text-[var(--color-primary)]">
+                    Email verified
+                  </span>
+                  {user?.role === 'ADMIN' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                      Super Admin
                     </span>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             </Card>
-          )}
 
-          {/* Links */}
-          {[
-            { icon: User, title: t('profile') },
-            { icon: Wrench, title: t('providerTools') },
-            { icon: Bell, title: t('notifications') },
-            { icon: Shield, title: t('privacy') },
-            { icon: HelpCircle, title: t('help') },
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <Card
-                key={idx}
-                interactive
-                className="p-4 flex items-center justify-between"
+            {/* Menu List */}
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] divide-y divide-[var(--color-border)] overflow-hidden shadow-sm">
+              <button
+                type="button"
+                onClick={() => setView('personal')}
+                className="w-full flex items-center justify-between p-3.5 hover:bg-[var(--color-surface-2)] transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
-                  <Icon className="h-5 w-5 text-[var(--color-primary)]" />
-                  <span className="font-semibold text-[14px] text-[var(--color-text)]">
-                    {item.title}
-                  </span>
+                  <User className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                  <div>
+                    <div className="text-[14px] font-semibold text-[var(--color-text)]">
+                      Personal details
+                    </div>
+                    <div className="text-[12px] text-[var(--color-text-secondary)]">
+                      Name, neighborhood, private phone
+                    </div>
+                  </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" />
-              </Card>
-            );
-          })}
+              </button>
 
-          {isSignedIn && (
-            <Card
-              interactive
-              onClick={() => {
-                setIsSignedIn(false);
+              <button
+                type="button"
+                onClick={() => router.push('/jobs')}
+                className="w-full flex items-center justify-between p-3.5 hover:bg-[var(--color-surface-2)] transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <Briefcase className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                  <div>
+                    <div className="text-[14px] font-semibold text-[var(--color-text)]">
+                      My tasks & jobs
+                    </div>
+                    <div className="text-[12px] text-[var(--color-text-secondary)]">
+                      Active matches and history
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setView('security')}
+                className="w-full flex items-center justify-between p-3.5 hover:bg-[var(--color-surface-2)] transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <Lock className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                  <div>
+                    <div className="text-[14px] font-semibold text-[var(--color-text)]">
+                      Sign-in and security
+                    </div>
+                    <div className="text-[12px] text-[var(--color-text-secondary)]">
+                      Password, active sessions
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setView('help')}
+                className="w-full flex items-center justify-between p-3.5 hover:bg-[var(--color-surface-2)] transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <HelpCircle className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                  <div>
+                    <div className="text-[14px] font-semibold text-[var(--color-text)]">
+                      Help and support
+                    </div>
+                    <div className="text-[12px] text-[var(--color-text-secondary)]">
+                      FAQs, emergency contacts, support
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" />
+              </button>
+            </div>
+
+            {/* Logout button */}
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full py-3 text-sm font-semibold text-red-600 border-red-200 hover:bg-red-50 flex items-center justify-center gap-2"
+              onClick={async () => {
+                await logout();
                 router.push('/auth');
               }}
-              className="p-4 flex items-center justify-between text-[var(--color-danger)]"
             >
-              <div className="flex items-center gap-3">
-                <LogOut className="h-5 w-5" />
-                <span className="font-semibold text-[14px]">{t('signOut')}</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-[var(--color-danger)]" />
-            </Card>
-          )}
-        </div>
+              <LogOut className="h-4 w-4" />
+              Log out
+            </Button>
+          </div>
+        )}
 
-        {/* App Version Info */}
-        <div className="pt-4 text-center">
-          <p className="text-[12px] text-[var(--color-text-tertiary)]">
-            KIRAKA PWA v0.1.0 · Kigali, Rwanda
-          </p>
-        </div>
+        {/* ═══════════════════════════════════════════════════════════════
+            VIEW: PERSONAL DETAILS (Section 8)
+           ═══════════════════════════════════════════════════════════════ */}
+        {view === 'personal' && (
+          <form onSubmit={handleSavePersonal} className="space-y-4">
+            {personalSuccess && (
+              <Banner variant="info" message="Personal details updated successfully." />
+            )}
+            {personalError && (
+              <Banner variant="warning" message={personalError} onDismiss={() => setPersonalError(null)} />
+            )}
+
+            {/* Profile Avatar Upload with R2 */}
+            <div className="p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl space-y-3">
+              <label className="text-sm font-semibold text-[var(--color-text)] block">
+                Profile Photo
+              </label>
+              <ImageUploader
+                purpose={UploadPurpose.AVATAR}
+                existingUrls={avatarUrl ? [avatarUrl] : []}
+                onChange={(urls) => setAvatarUrl(urls[0] || '')}
+                maxFiles={1}
+                label=""
+              />
+            </div>
+
+            <Card className="p-4 space-y-4 bg-[var(--color-surface)]">
+              <Input
+                label="Full Name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-[var(--color-text)]">
+                  Email Address
+                </label>
+                <div className="px-3 py-2 rounded-lg bg-[var(--color-surface-2)] text-sm text-[var(--color-text-secondary)] font-mono">
+                  {user?.email}
+                </div>
+                <span className="text-[11px] text-[var(--color-text-tertiary)]">
+                  Primary identifier for sign-in and security notices.
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-[var(--color-text)]">
+                  Kigali Neighborhood
+                </label>
+                <select
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                >
+                  {KIGALI_NEIGHBORHOODS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Private Phone Field (D-018) */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-[var(--color-text)] flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                    Phone Number (Private)
+                  </label>
+                  <span className="text-[11px] text-[var(--color-text-tertiary)]">Optional</span>
+                </div>
+                <input
+                  type="tel"
+                  placeholder="+250 788 000 000"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                />
+                <span className="text-[11px] text-[var(--color-text-tertiary)] block">
+                  Only shared if you explicitly choose to share it in a chat agreement.
+                </span>
+              </div>
+            </Card>
+
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full py-3 text-sm font-semibold"
+              disabled={savingPersonal}
+            >
+              {savingPersonal ? 'Saving changes...' : 'Save changes'}
+            </Button>
+          </form>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            VIEW: SIGN-IN & SECURITY (Section 8)
+           ═══════════════════════════════════════════════════════════════ */}
+        {view === 'security' && (
+          <div className="space-y-5">
+            <Card className="p-4 space-y-4 bg-[var(--color-surface)]">
+              <h3 className="text-[15px] font-bold text-[var(--color-text)]">
+                Active Sessions
+              </h3>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Devices currently authenticated into your KIRAKA account.
+              </p>
+
+              <div className="p-3 bg-[var(--color-surface-2)] rounded-lg flex items-center justify-between text-xs">
+                <div>
+                  <div className="font-semibold text-[var(--color-text)]">Current Web Session</div>
+                  <div className="text-[var(--color-text-secondary)]">Kigali, Rwanda • Active now</div>
+                </div>
+                <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded font-bold text-[10px]">
+                  This Device
+                </span>
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full text-xs font-semibold py-2.5 text-red-600 border-red-200 hover:bg-red-50"
+                onClick={handleSignOutEverywhere}
+              >
+                Sign out everywhere
+              </Button>
+            </Card>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            VIEW: HELP & SUPPORT (Section 8)
+           ═══════════════════════════════════════════════════════════════ */}
+        {view === 'help' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl space-y-3">
+              <h3 className="text-[15px] font-bold text-[var(--color-text)]">
+                Frequently Asked Questions
+              </h3>
+
+              <div className="space-y-2 text-xs divide-y divide-[var(--color-border)]">
+                <div className="pt-2">
+                  <strong className="text-[var(--color-text)] block">How do offers and pricing work?</strong>
+                  <span className="text-[var(--color-text-secondary)]">
+                    Providers offer bids directly on your posted tasks. You can negotiate terms and accept the best fit.
+                  </span>
+                </div>
+                <div className="pt-2">
+                  <strong className="text-[var(--color-text)] block">How do I pay the provider?</strong>
+                  <span className="text-[var(--color-text-secondary)]">
+                    KIRAKA does not take platform commission fees. Payment is made directly to the provider via Mobile Money (MoMo) or cash upon confirmed completion.
+                  </span>
+                </div>
+                <div className="pt-2">
+                  <strong className="text-[var(--color-text)] block">What does "Email verified" mean?</strong>
+                  <span className="text-[var(--color-text-secondary)]">
+                    It confirms the user owns and verified their email address. It is not an identity or background clearance.
+                  </span>
+                </div>
+                <div className="pt-2">
+                  <strong className="text-[var(--color-text)] block">Emergency Assistance in Rwanda</strong>
+                  <span className="text-[var(--color-text-secondary)]">
+                    Rwanda National Police: 112 • Medical Emergency: 912 • Fire: 111.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

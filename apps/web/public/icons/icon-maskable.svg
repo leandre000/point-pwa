@@ -1,6 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" fill="#205641"/>
-  <path d="M150 140h60v105l95-105h80l-110 120 115 130h-80l-100-115v115h-60V140z" fill="#FAF9F6"/>
-  <circle cx="370" cy="155" r="26" fill="#C98A1B"/>
-</svg>
+  <defs>
+    <linearGradient id="maskableGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#24634B" />
+      <stop offset="100%" stop-color="#194735" />
+    </linearGradient>
+  </defs>
 
+  <!-- Full bleed background for any OS mask shape -->
+  <rect width="512" height="512" fill="url(#maskableGrad)" />
+
+  <!-- The "K" Geometry scaled and positioned strictly inside 80% safe zone (center 400x400) -->
+  <g transform="translate(68, 68) scale(1.958)">
+    <!-- Vertical Stem -->
+    <rect x="44" y="42" width="22" height="108" rx="7" fill="#FAF9F6" />
+
+    <!-- Lower Leg -->
+    <path d="M66 102 L118 150 C121 153 126 153 130 150 L140 140 C143 137 143 132 140 129 L96 89 Z" fill="#FAF9F6" />
+
+    <!-- Upper Arm rising from junction -->
+    <path d="M66 90 L108 52 C111 49 116 50 119 53 L126 60 C129 63 129 68 126 71 L88 106 Z" fill="#FAF9F6" />
+
+    <!-- Location Pin Head integrated into upper arm -->
+    <path d="M130 38 C144 38 155 49 155 63 C155 77 138 97 132 103 C131 104 129 104 128 103 C122 97 105 77 105 63 C105 49 116 38 130 38 Z" fill="#E0A12B" />
+
+    <!-- Location Pin Center Hole -->
+    <circle cx="130" cy="63" r="8" fill="#FAF9F6" />
+  </g>
+</svg>
